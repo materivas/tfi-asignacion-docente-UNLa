@@ -1,24 +1,25 @@
-import logo from './logo.svg';
-import './App.css';
+// Importamos elementos de react-router-dom para definir rutas
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+// Importamos nuestros componentes
+import Navbar from './components/Navbar';
+import Home from './pages/Home';
+import Tablero from './pages/Tablero';
+import Gestion from './pages/Gestion';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      {/* Siempre visible: la barra de navegación */}
+      <Navbar />
+
+      {/* Acá definimos qué componente se muestra en cada ruta */}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/tablero" element={<Tablero />} />
+        <Route path="/gestion" element={<Gestion />} />
+      </Routes>
+    </Router>
   );
 }
 
