@@ -1,14 +1,13 @@
-package com.gestion.backend;
+package com.example.gestion_docentes_Unla;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class
-BackendApplication {
+public class GestionDocentesUnlaApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(BackendApplication.class, args);
+		SpringApplication.run(GestionDocentesUnlaApplication.class, args);
 	}
 
 }
