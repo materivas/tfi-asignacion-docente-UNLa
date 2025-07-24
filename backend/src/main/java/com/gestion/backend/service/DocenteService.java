@@ -1,8 +1,12 @@
 package com.gestion.backend.service;
 
+import com.gestion.backend.dto.DocenteDto;
+import com.gestion.backend.dto.CategoriaDto;
+import com.gestion.backend.model.Categoria;
 import com.gestion.backend.model.Docente;
 import com.gestion.backend.model.AsignacionDocente;
 import com.gestion.backend.repository.DocenteRepository;
+import com.gestion.backend.repository.CategoriaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,32 +20,33 @@ public class DocenteService {
     @Autowired
     private DocenteRepository docenteRepository;
 
-    public List<Docente> listarTodos() {
-        return docenteRepository.findAll();
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+
+    public List<DocenteDto> listarTodos() {
+        return docenteRepository.findAll().stream().map(DocenteDto::fromEntity).toList();
     }
 
-    public Optional<Docente> obtenerPorId(Long id) {
-        return docenteRepository.findById(id);
+    public Optional<DocenteDto> obtenerPorId(Long id) {
+        return docenteRepository.findById(id).map(DocenteDto::fromEntity);
     }
 
     @Transactional
-    public Docente crear(Docente docente) {
-        // Si hay asignacionesDocente, establecer la relación bidireccional
-        if (docente.getAsignacionesDocente() != null && !docente.getAsignacionesDocente().isEmpty()) {
-            for (AsignacionDocente asignacionDocente : docente.getAsignacionesDocente()) {
-                asignacionDocente.setDocente(docente);
-            }
-        }
-        
-        return docenteRepository.save(docente);
+    public DocenteDto crear(DocenteDto dto) {
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+            .orElseThrow(() -> new RuntimeException("Categoria no encontrada"));
+        var docente = DocenteDto.toEntity(dto, categoria);
+        return DocenteDto.fromEntity(docenteRepository.save(docente));
     }
 
-    public Docente actualizar(Long id, Docente docenteActualizado) {
+    public DocenteDto actualizar(Long id, DocenteDto dto) {
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+            .orElseThrow(() -> new RuntimeException("Categoria no encontrada"));
         return docenteRepository.findById(id).map(docente -> {
-            docente.setNombre(docenteActualizado.getNombre());
-            docente.setDni(docenteActualizado.getDni());
-            docente.setCategoria(docenteActualizado.getCategoria());
-            return docenteRepository.save(docente);
+            docente.setNombre(dto.getNombre());
+            docente.setDni(dto.getDni());
+            docente.setCategoria(categoria);
+            return DocenteDto.fromEntity(docenteRepository.save(docente));
         }).orElseThrow(() -> new RuntimeException("Docente no encontrado"));
     }
 
