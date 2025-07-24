@@ -7,17 +7,27 @@ function CuatrimestreForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!anio || !numero) return alert("Completar año y número.");
 
-    const cuatrimestre = { anio, numero, activo };
-    console.log("Alta cuatrimestre:", cuatrimestre);
-    alert("Cuatrimestre registrado.");
+    if (!anio || !numero) {
+      alert("Completá el año y el número del cuatrimestre.");
+      return;
+    }
+
+    const cuatri = {
+      anio,
+      numero,
+      activo,
+    };
+
+    console.log("Cuatrimestre registrado:", cuatri);
+    alert("Cuatrimestre guardado correctamente.");
     setAnio(""); setNumero(""); setActivo(false);
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
       <h3>Alta de Cuatrimestre</h3>
+
       <label>Año:</label>
       <input type="number" value={anio} onChange={(e) => setAnio(e.target.value)} />
 

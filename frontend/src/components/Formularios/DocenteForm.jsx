@@ -3,16 +3,19 @@ import { useState } from "react";
 function DocenteForm() {
   const [nombre, setNombre] = useState("");
   const [dni, setDni] = useState("");
-  const [rol, setRol] = useState("");
+  const [categoriaId, setCategoriaId] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!nombre || !dni || !rol) return alert("Completar todos los campos.");
+    if (!nombre || !dni || !categoriaId) {
+      alert("Completá todos los campos.");
+      return;
+    }
 
-    const docente = { nombre, dni, rol };
-    console.log("Alta docente:", docente);
-    alert("Docente registrado.");
-    setNombre(""); setDni(""); setRol("");
+    const docente = { nombre, dni, categoriaId };
+    console.log("Docente registrado:", docente);
+    alert("Docente registrado correctamente.");
+    setNombre(""); setDni(""); setCategoriaId("");
   };
 
   return (
@@ -24,13 +27,13 @@ function DocenteForm() {
       <label>DNI:</label>
       <input value={dni} onChange={(e) => setDni(e.target.value)} />
 
-      <label>Rol:</label>
-      <select value={rol} onChange={(e) => setRol(e.target.value)}>
+      <label>Categoría:</label>
+      <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
         <option value="">Seleccione</option>
-        <option value="Titular">Titular</option>
-        <option value="Adjunto">Adjunto</option>
-        <option value="JTP">JTP</option>
-        <option value="Ayudante">Ayudante</option>
+        <option value="1">Titular</option>
+        <option value="2">Adjunto</option>
+        <option value="3">JTP</option>
+        <option value="4">Ayudante</option>
       </select>
 
       <button type="submit">Registrar</button>

@@ -6,20 +6,22 @@ function PlanForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!nombre || !descripcion) return alert("Completar nombre y descripción.");
+    if (!nombre || !descripcion) {
+      alert("Completá ambos campos.");
+      return;
+    }
 
-    const plan = { nombre, descripcion };
-    console.log("Alta plan:", plan);
-    alert("Plan registrado.");
+    console.log("Plan registrado:", { nombre, descripcion });
+    alert("Plan guardado.");
     setNombre(""); setDescripcion("");
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
       <h3>Alta de Plan</h3>
-      <label>Nombre del plan:</label>
+      <label>Nombre:</label>
       <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
-
+      
       <label>Descripción:</label>
       <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
 
