@@ -23,7 +23,4 @@ public class Rol {
     @Column(nullable = false, unique = true)
     private String nombre;
 
-    @OneToMany(mappedBy = "rol", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JsonIgnore
-    private List<AsignacionDocente> asignacionesDocentes;
 }

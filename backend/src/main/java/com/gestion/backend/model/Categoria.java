@@ -26,8 +26,5 @@ public class Categoria {
     @Column(name = "max_materias", nullable = false)
     private Integer maxMaterias;
 
-    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<Docente> docentes;
 }
 
