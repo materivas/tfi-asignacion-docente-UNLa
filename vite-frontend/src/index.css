@@ -1,0 +1,49 @@
+/* Tailwind base styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global body styles */
+body {
+  background-color: #f9fafb; /* bg-gray-50 */
+  color: #1f2937;            /* text-gray-800 */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0; /* gray-300 */
+  border-radius: 4px;
+}
+
+/* Link styling */
+a {
+  color: #2563eb; /* text-blue-600 */
+  text-decoration: underline;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Heading defaults */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600; /* font-semibold */
+  color: #111827;   /* text-gray-900 */
+}
+
+/* Container utility */
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;  /* px-4 */
+  padding-right: 1rem;
+}
