@@ -1,5 +1,7 @@
 package com.gestion.backend.dto;
 
+import com.gestion.backend.model.Categoria;
+
 public class CategoriaDto {
     private Long id;
     private String nombre;
@@ -11,6 +13,22 @@ public class CategoriaDto {
         this.id = id;
         this.nombre = nombre;
         this.maxMaterias = maxMaterias;
+    }
+
+    public static CategoriaDto fromEntity(Categoria categoria) {
+        return new CategoriaDto(
+            categoria.getId(),
+            categoria.getNombre(),
+            categoria.getMaxMaterias()
+        );
+    }
+
+    public static Categoria toEntity(CategoriaDto dto) {
+        Categoria categoria = new Categoria();
+        categoria.setId(dto.getId());
+        categoria.setNombre(dto.getNombre());
+        categoria.setMaxMaterias(dto.getMaxMaterias());
+        return categoria;
     }
 
     public Long getId() {

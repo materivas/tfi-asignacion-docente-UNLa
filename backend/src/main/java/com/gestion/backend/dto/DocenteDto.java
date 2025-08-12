@@ -1,5 +1,8 @@
 package com.gestion.backend.dto;
 
+import com.gestion.backend.model.Docente;
+import com.gestion.backend.model.Categoria;
+
 public class DocenteDto {
     private Long id;
     private String nombre;
@@ -13,6 +16,24 @@ public class DocenteDto {
         this.nombre = nombre;
         this.dni = dni;
         this.categoriaId = categoriaId;
+    }
+
+    public static DocenteDto fromEntity(Docente docente) {
+        return new DocenteDto(
+            docente.getId(),
+            docente.getNombre(),
+            docente.getDni(),
+            docente.getCategoria() != null ? docente.getCategoria().getId() : null
+        );
+    }
+
+    public static Docente toEntity(DocenteDto dto, Categoria categoria) {
+        Docente docente = new Docente();
+        docente.setId(dto.getId());
+        docente.setNombre(dto.getNombre());
+        docente.setDni(dto.getDni());
+        docente.setCategoria(categoria);
+        return docente;
     }
 
     public Long getId() {
