@@ -1,0 +1,39 @@
+package com.gestion.backend.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+@Configuration
+public class CorsConfig {
+
+    /**
+     * Configuración global de CORS para permitir comunicación entre frontend y backend.
+     * En desarrollo se permite localhost:5173 (Vite).
+     * En producción se recomienda restringir el origen.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        //  En desarrollo
+        configuration.addAllowedOrigin("http://localhost:5173");
+
+        //  Métodos permitidos
+        configuration.addAllowedMethod("*");
+
+        //  Headers permitidos
+        configuration.addAllowedHeader("*");
+
+        //  Permitir envío de credenciales (cookies, tokens)
+        configuration.setAllowCredentials(true);
+
+        //  Aplicar configuración a todas las rutas
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+}

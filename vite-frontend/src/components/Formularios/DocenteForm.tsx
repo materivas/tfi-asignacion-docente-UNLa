@@ -1,27 +1,36 @@
 import { useState } from "react";
+import axios from "axios";
 import type { ChangeEvent, FormEvent } from "react";
-import type { Docente } from "../../types"; // Ajustá la ruta según tu estructura
+import type { Docente } from "../../types";
 
 const DocenteForm: React.FC = () => {
   const [nombre, setNombre] = useState<string>("");
   const [dni, setDni] = useState<string>("");
   const [categoriaId, setCategoriaId] = useState<string>("");
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!nombre || !dni || !categoriaId) {
-      alert("Completá todos los campos.");
-      return;
+    const nuevoDocente: Docente = {
+      nombre,
+      dni,
+      categoriaId
+    };
+
+    try {
+      const response = await axios.post("http://localhost:8080/api/docentes", nuevoDocente, {
+        withCredentials: true
+      });
+      console.log("Docente registrado:", response.data);
+      alert("Docente registrado correctamente.");
+
+      setNombre("");
+      setDni("");
+      setCategoriaId("");
+    } catch (error) {
+      console.error("Error al registrar el docente:", error);
+      alert("Hubo un error al registrar el docente.");
     }
-
-    const nuevoDocente: Docente = { nombre, dni, categoriaId };
-    console.log("Docente registrado:", nuevoDocente);
-    alert("Docente registrado correctamente.");
-
-    setNombre("");
-    setDni("");
-    setCategoriaId("");
   };
 
   return (

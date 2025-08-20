@@ -1,64 +1,46 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import type { Cuatrimestre } from "../../types"; // Ajustá la ruta según tu estructura
+import type { Cuatrimestre } from "../../types";
+import { crearCuatrimestre } from "../../api/cuatrimestreApi";
 
 const CuatrimestreForm: React.FC = () => {
-  const [anio, setAnio] = useState<string>("");
-  const [numero, setNumero] = useState<string>("");
-  const [activo, setActivo] = useState<boolean>(false);
+  const [numeroCuatri, setNumeroCuatri] = useState("");
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    if (!anio || !numero) {
-      alert("Completá el año y el número del cuatrimestre.");
+    if (!numeroCuatri) {
+      alert("Completá el número de cuatrimestre.");
       return;
     }
 
     const nuevoCuatrimestre: Cuatrimestre = {
-      anio,
-      numero,
-      activo,
+      numeroCuatri: Number(numeroCuatri)
     };
 
-    console.log("Cuatrimestre registrado:", nuevoCuatrimestre);
-    alert("Cuatrimestre guardado correctamente.");
-
-    setAnio("");
-    setNumero("");
-    setActivo(false);
+    try {
+      const res = await crearCuatrimestre(nuevoCuatrimestre);
+      console.log("✅ Cuatrimestre registrado:", res.data);
+      alert("✅ Cuatrimestre guardado con éxito.");
+      setNumeroCuatri("");
+    } catch (error) {
+      console.error("❌ Error al guardar el cuatrimestre:", error);
+      alert("❌ Hubo un error al guardar el cuatrimestre.");
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
       <h3>Alta de Cuatrimestre</h3>
-
-      <label>Año:</label>
-      <input
-        type="number"
-        value={anio}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setAnio(e.target.value)}
-      />
-
-      <label>Cuatrimestre:</label>
+      <label>Número de cuatrimestre:</label>
       <select
-        value={numero}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => setNumero(e.target.value)}
+        value={numeroCuatri}
+        onChange={(e: ChangeEvent<HTMLSelectElement>) => setNumeroCuatri(e.target.value)}
+        required
       >
         <option value="">Seleccione</option>
         <option value="1">1°</option>
         <option value="2">2°</option>
       </select>
-
-      <label>
-        <input
-          type="checkbox"
-          checked={activo}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setActivo(e.target.checked)}
-        />
-        ¿Está activo?
-      </label>
-
       <button type="submit">Registrar</button>
     </form>
   );
