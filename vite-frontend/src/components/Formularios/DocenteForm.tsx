@@ -1,15 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import type { ChangeEvent, FormEvent } from "react";
-import type { Docente } from "../../types";
+import type { Docente, Categoria } from "../../types";
+import { listarCategorias } from "../../api/categoriaApi";
 
 const DocenteForm: React.FC = () => {
   const [nombre, setNombre] = useState<string>("");
   const [dni, setDni] = useState<string>("");
-  const [categoriaId, setCategoriaId] = useState<string>("");
+  const [categoriaId, setCategoriaId] = useState<number | "">("");
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategorias = async () => {
+      try {
+        const res = await listarCategorias();
+        setCategorias(res.data);
+      } catch (err) {
+        console.error("Error al cargar categorías:", err);
+        setError("No se pudieron cargar las categorías.");
+      }
+    };
+
+    fetchCategorias();
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (categoriaId === "") {
+      alert("Debe seleccionar una categoría.");
+      return;
+    }
 
     const nuevoDocente: Docente = {
       nombre,
@@ -54,14 +76,20 @@ const DocenteForm: React.FC = () => {
       <label>Categoría:</label>
       <select
         value={categoriaId}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategoriaId(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+          const value = e.target.value;
+          setCategoriaId(value === "" ? "" : Number(value));
+        }}
       >
         <option value="">Seleccione</option>
-        <option value="1">Titular</option>
-        <option value="2">Adjunto</option>
-        <option value="3">JTP</option>
-        <option value="4">Ayudante</option>
+        {categorias.map((cat) => (
+          <option key={cat.id} value={cat.id}>
+            {cat.nombre}
+          </option>
+        ))}
       </select>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       <button type="submit">Registrar</button>
     </form>

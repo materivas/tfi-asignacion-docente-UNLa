@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Docente } from "../types"; // Ajustá la ruta según tu estructura
+import type { Docente } from "../types"; 
 
 const BASE_URL = "http://localhost:8080/api/docentes";
 
@@ -11,7 +11,7 @@ export const crearDocente = async (docente: Docente): Promise<Docente> => {
 };
 
 
-export const obtenerDocentes = async (): Promise<Docente[]> => {
+export const listarDocentes = async (): Promise<Docente[]> => {
   const response = await axios.get(BASE_URL, {
     withCredentials: true
   });
