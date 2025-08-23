@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import DocenteForm from "../components/Formularios/DocenteForm";
-import { listarDocentes } from "../api/docenteApi";
+import Modal from "../components/Modal";
+import { listarDocentes, crearDocente, eliminarDocente } from "../api/docenteApi";
 import { listarCategorias } from "../api/categoriaApi";
 import type { Docente, Categoria } from "../types";
 
@@ -10,20 +11,26 @@ function GestionDocente() {
   const [categoriasMap, setCategoriasMap] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [docenteEditando, setDocenteEditando] = useState<Docente | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [docentes, resCategorias] = await Promise.all([
+        const [resDocentes, resCategorias] = await Promise.all([
           listarDocentes(),
           listarCategorias()
         ]);
 
-        setDocentes(docentes);
+        setDocentes(resDocentes);
 
         const map = new Map<number, string>();
         resCategorias.data.forEach((cat: Categoria) => {
-          map.set(cat.id , cat.nombre);
+        resCategorias.data.forEach((cat: Categoria) => {
+       if (cat.id != null) {
+           map.set(cat.id, cat.nombre);
+       }
+           });
+
         });
         setCategoriasMap(map);
       } catch (err) {
@@ -37,13 +44,51 @@ function GestionDocente() {
     fetchData();
   }, []);
 
+  const handleCrear = async (docente: Docente) => {
+    try {
+      const nuevo = await crearDocente(docente);
+      setDocentes((prev) => [...prev, nuevo]);
+      alert("✅ Docente registrado");
+    } catch (err) {
+      console.error("❌ Error al crear docente:", err);
+      alert("❌ No se pudo registrar el docente");
+    }
+  };
+
+  const handleEditar = async (docente: Docente) => {
+    try {
+      const res = await crearDocente(docente); // Reutilizamos POST como reemplazo
+      setDocentes((prev) =>
+        prev.map((d) => (d.id === res.id ? res : d))
+      );
+      alert("✅ Docente actualizado");
+      setDocenteEditando(null);
+    } catch (err) {
+      console.error("❌ Error al editar docente:", err);
+      alert("❌ No se pudo actualizar el docente");
+    }
+  };
+
+  const handleEliminar = async (id: number) => {
+    const confirmar = window.confirm("¿Eliminar este docente?");
+    if (!confirmar) return;
+
+    try {
+      await eliminarDocente(id);
+      setDocentes((prev) => prev.filter((d) => d.id !== id));
+      alert("✅ Docente eliminado");
+    } catch (err) {
+      console.error("❌ Error al eliminar docente:", err);
+      alert("❌ No se pudo eliminar el docente");
+    }
+  };
+
   return (
     <Layout>
       <h2 style={titulo}>👨‍🏫 Gestión de docentes</h2>
 
       <div style={intro}>
         <p>📌 Aquí verás los docentes registrados y sus categorías académicas.</p>
-        <button style={btnAlta}>➕ Dar de alta nuevo docente</button>
       </div>
 
       {loading ? (
@@ -55,16 +100,31 @@ function GestionDocente() {
           {docentes.map((doc) => (
             <li key={doc.id} style={itemEstilo}>
               🧑‍🏫 <strong>{doc.nombre}</strong> — {categoriasMap.get(doc.categoriaId ?? -1) ?? "Sin categoría"}
+              <button onClick={() => setDocenteEditando(doc)} style={btnEditar}>✏️</button>
+              <button onClick={() => handleEliminar(doc.id)} style={btnEliminar}>🗑️</button>
             </li>
           ))}
         </ul>
       )}
 
-      <DocenteForm />
+      {!docenteEditando && (
+        <DocenteForm onSubmit={handleCrear} />
+      )}
+
+      {docenteEditando && (
+        <Modal onClose={() => setDocenteEditando(null)}>
+          <DocenteForm
+            docenteInicial={docenteEditando}
+            onSubmit={handleEditar}
+            onCancel={() => setDocenteEditando(null)}
+          />
+        </Modal>
+      )}
     </Layout>
   );
 }
 
+// Estilos
 const titulo: React.CSSProperties = {
   textAlign: "center",
   marginBottom: "1rem"
@@ -79,14 +139,23 @@ const centrado: React.CSSProperties = {
   textAlign: "center"
 };
 
-const btnAlta: React.CSSProperties = {
-  backgroundColor: "#1F4F7A",
+const btnEditar: React.CSSProperties = {
+  marginLeft: "1rem",
+  backgroundColor: "#1F5A7A",
   color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
   border: "none",
-  marginTop: "1rem",
+  borderRadius: "4px",
+  padding: "0.2rem 0.5rem",
+  cursor: "pointer"
+};
+
+const btnEliminar: React.CSSProperties = {
+  marginLeft: "0.5rem",
+  backgroundColor: "#d9534f",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.5rem",
   cursor: "pointer"
 };
 

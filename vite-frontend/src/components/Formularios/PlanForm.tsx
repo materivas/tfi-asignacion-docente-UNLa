@@ -1,11 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Plan } from "../../types";
 import { crearPlan } from "../../api/planApi";
 
-const PlanForm: React.FC = () => {
+type Props = {
+  planInicial?: Plan;
+  onSubmit: (plan: Plan) => void;
+  onCancel?: () => void;
+};
+
+const PlanForm: React.FC<Props> = ({ planInicial, onSubmit, onCancel }) => {
   const [nombre, setNombre] = useState<string>("");
   const [descripcion, setDescripcion] = useState<string>("");
+
+  useEffect(() => {
+    if (planInicial) {
+      setNombre(planInicial.nombre);
+      setDescripcion(planInicial.descripcion);
+    }
+  }, [planInicial]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -14,23 +27,20 @@ const PlanForm: React.FC = () => {
       return;
     }
 
-    const nuevoPlan: Plan = { nombre, descripcion };
+    const planFinal: Plan = {
+      id: planInicial?.id ?? 0,
+      nombre,
+      descripcion
+    };
 
-    try {
-      const res = await crearPlan(nuevoPlan);
-      console.log("✅ Plan registrado:", res.data);
-      alert("✅ Plan guardado con éxito.");
-      setNombre("");
-      setDescripcion("");
-    } catch (error) {
-      console.error("❌ Error al guardar el plan:", error);
-      alert("❌ Hubo un error al guardar el plan.");
-    }
+    onSubmit(planFinal);
+    setNombre("");
+    setDescripcion("");
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
-      <h3>Alta de Plan</h3>
+      <h3>{planInicial ? "Editar Plan" : "Alta de Plan"}</h3>
       <label>Nombre:</label>
       <input
         value={nombre}
@@ -43,7 +53,12 @@ const PlanForm: React.FC = () => {
         onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescripcion(e.target.value)}
         required
       />
-      <button type="submit">Registrar</button>
+      <button type="submit">{planInicial ? "Actualizar" : "Registrar"}</button>
+      {onCancel && (
+        <button type="button" onClick={onCancel} style={{ marginLeft: "1rem" }}>
+          Cancelar
+        </button>
+      )}
     </form>
   );
 };

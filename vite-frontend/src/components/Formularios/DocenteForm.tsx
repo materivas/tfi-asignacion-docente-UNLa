@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Docente, Categoria } from "../../types";
 import { listarCategorias } from "../../api/categoriaApi";
 
-const DocenteForm: React.FC = () => {
-  const [nombre, setNombre] = useState<string>("");
-  const [dni, setDni] = useState<string>("");
-  const [categoriaId, setCategoriaId] = useState<number | "">("");
+interface Props {
+  docenteInicial?: Docente;
+  onSubmit?: (docente: Docente) => void;
+  onCancel?: () => void;
+}
+
+const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) => {
+  const [nombre, setNombre] = useState(docenteInicial?.nombre ?? "");
+  const [dni, setDni] = useState(docenteInicial?.dni ?? "");
+  const [categoriaId, setCategoriaId] = useState<number | "">(docenteInicial?.categoriaId ?? "");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,42 +33,38 @@ const DocenteForm: React.FC = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (categoriaId === "") {
-      alert("Debe seleccionar una categoría.");
+    if (!nombre || !dni || categoriaId === "") {
+      alert("Completá todos los campos.");
       return;
     }
 
-    const nuevoDocente: Docente = {
+    const docente: Docente = {
+      id: docenteInicial?.id ?? 0,
       nombre,
       dni,
-      categoriaId
+      categoriaId: Number(categoriaId)
     };
 
-    try {
-      const response = await axios.post("http://localhost:8080/api/docentes", nuevoDocente, {
-        withCredentials: true
-      });
-      console.log("Docente registrado:", response.data);
-      alert("Docente registrado correctamente.");
-
+    if (onSubmit) {
+      await onSubmit(docente);
       setNombre("");
       setDni("");
       setCategoriaId("");
-    } catch (error) {
-      console.error("Error al registrar el docente:", error);
-      alert("Hubo un error al registrar el docente.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
-      <h3>Alta de Docente</h3>
+      <h3 style={{ textAlign: "center" }}>
+        {docenteInicial ? "Editar Docente" : "Alta de Docente"}
+      </h3>
 
       <label>Nombre:</label>
       <input
         type="text"
         value={nombre}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
+        required
       />
 
       <label>DNI:</label>
@@ -71,6 +72,7 @@ const DocenteForm: React.FC = () => {
         type="text"
         value={dni}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setDni(e.target.value)}
+        required
       />
 
       <label>Categoría:</label>
@@ -80,6 +82,7 @@ const DocenteForm: React.FC = () => {
           const value = e.target.value;
           setCategoriaId(value === "" ? "" : Number(value));
         }}
+        required
       >
         <option value="">Seleccione</option>
         {categorias.map((cat) => (
@@ -91,7 +94,19 @@ const DocenteForm: React.FC = () => {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <button type="submit">Registrar</button>
+      <button type="submit">
+        {docenteInicial ? "Guardar cambios" : "Registrar"}
+      </button>
+
+      {docenteInicial && onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{ marginTop: "0.5rem", backgroundColor: "#999", color: "white", border: "none", padding: "0.5rem", borderRadius: "4px", cursor: "pointer" }}
+        >
+          Cancelar edición
+        </button>
+      )}
     </form>
   );
 };

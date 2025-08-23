@@ -1,46 +1,69 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Categoria } from "../../types";
-import { crearCategoria } from "../../api/categoriaApi";
 
-const CategoriaForm: React.FC = () => {
+type Props = {
+  categoriaInicial?: Categoria;
+  onSubmit: (categoria: Categoria) => void;
+  onCancel?: () => void;
+};
+
+const CategoriaForm: React.FC<Props> = ({ categoriaInicial, onSubmit, onCancel }) => {
   const [nombre, setNombre] = useState("");
   const [maxMaterias, setMaxMaterias] = useState("");
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (categoriaInicial) {
+      setNombre(categoriaInicial.nombre);
+      setMaxMaterias(String(categoriaInicial.maxMaterias));
+    }
+  }, [categoriaInicial]);
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (!nombre || !maxMaterias) {
       alert("Completá todos los campos.");
       return;
     }
 
-    const nuevaCategoria: Categoria = {
+    const categoriaFinal: Categoria = {
+      id: categoriaInicial?.id, // puede ser undefined
       nombre,
       maxMaterias: Number(maxMaterias)
     };
 
-    try {
-      const res = await crearCategoria(nuevaCategoria);
-      console.log("✅ Categoría registrada:", res.data);
-      alert("✅ Categoría guardada con éxito.");
-      setNombre("");
-      setMaxMaterias("");
-    } catch (error) {
-      console.error("❌ Error al guardar la categoría:", error);
-      alert("❌ Hubo un error al guardar la categoría.");
-    }
+    onSubmit(categoriaFinal);
+    setNombre("");
+    setMaxMaterias("");
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
-      <h3>Alta de Categoría</h3>
+      <h3>{categoriaInicial ? "Editar Categoría" : "Alta de Categoría"}</h3>
+
       <label>Nombre:</label>
-      <input value={nombre} onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)} required />
+      <input
+        value={nombre}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
+        required
+      />
 
       <label>Máximo de materias:</label>
-      <input type="number" value={maxMaterias} onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxMaterias(e.target.value)} required />
+      <input
+        type="number"
+        value={maxMaterias}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxMaterias(e.target.value)}
+        required
+      />
 
-      <button type="submit">Registrar</button>
+      <button type="submit">{categoriaInicial ? "Actualizar" : "Registrar"}</button>
+
+      {onCancel && (
+        <button type="button" onClick={onCancel} style={{ marginLeft: "1rem" }}>
+          Cancelar
+        </button>
+      )}
     </form>
   );
 };

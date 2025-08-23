@@ -1,18 +1,19 @@
 import { useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { FormEvent } from "react";
 import type { Materia, Plan } from "../../types";
-import { crearMateria } from "../../api/materiaApi";
 
 interface Props {
   planes: Pick<Plan, "id" | "nombre">[] | undefined;
+  materiaInicial?: Materia;
+  onSubmit?: (materia: Materia) => void;
+  onCancel?: () => void;
 }
 
-const MateriaForm: React.FC<Props> = ({ planes }) => {
-  const [nombre, setNombre] = useState("");
-  const [planId, setPlanId] = useState<number | "">("");
-  const [anio, setAnio] = useState<number | "">("");
+const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCancel }) => {
+  const [nombre, setNombre] = useState(materiaInicial?.nombre ?? "");
+  const [planId, setPlanId] = useState<number | "">(materiaInicial?.planId ?? "");
+  const [anio, setAnio] = useState<number | "">(materiaInicial?.anio ?? "");
 
-  // Validación defensiva
   if (!planes || !Array.isArray(planes)) {
     return (
       <p style={{ color: "red", textAlign: "center", marginTop: "2rem" }}>
@@ -28,28 +29,26 @@ const MateriaForm: React.FC<Props> = ({ planes }) => {
       return;
     }
 
-    const nuevaMateria: Materia = {
+    const materia: Materia = {
+      id: materiaInicial?.id ?? 0,
       nombre,
       planId: Number(planId),
       anio: Number(anio)
     };
 
-    try {
-      const res = await crearMateria(nuevaMateria);
-      console.log("✅ Materia registrada:", res.data);
-      alert("✅ Materia guardada con éxito.");
+    if (onSubmit) {
+      await onSubmit(materia);
       setNombre("");
       setPlanId("");
       setAnio("");
-    } catch (error) {
-      console.error("❌ Error al guardar la materia:", error);
-      alert("❌ Hubo un error al guardar la materia.");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
-      <h3 style={{ textAlign: "center" }}>Alta de Materia</h3>
+      <h3 style={{ textAlign: "center" }}>
+        {materiaInicial ? "Editar Materia" : "Alta de Materia"}
+      </h3>
 
       <label>Nombre:</label>
       <input
@@ -84,8 +83,22 @@ const MateriaForm: React.FC<Props> = ({ planes }) => {
       />
 
       <button type="submit" style={btnEstilo}>
-        Registrar
+        {materiaInicial ? "Guardar cambios" : "Registrar"}
       </button>
+
+      {materiaInicial && onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            ...btnEstilo,
+            backgroundColor: "#999",
+            marginTop: "0.5rem"
+          }}
+        >
+          Cancelar edición
+        </button>
+      )}
     </form>
   );
 };

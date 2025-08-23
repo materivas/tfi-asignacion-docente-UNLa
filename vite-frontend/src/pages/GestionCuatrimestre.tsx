@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import CuatrimestreForm from "../components/Formularios/CuatrimestreForm";
-import { listarCuatrimestres } from "../api/cuatrimestreApi";
+import Modal from "../components/Modal";
+import {
+  listarCuatrimestres,
+  crearCuatrimestre,
+  actualizarCuatrimestre,
+  eliminarCuatrimestre
+} from "../api/cuatrimestreApi";
 import type { Cuatrimestre } from "../types";
 
 function GestionCuatrimestre() {
   const [cuatrimestres, setCuatrimestres] = useState<Cuatrimestre[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cuatrimestreEditando, setCuatrimestreEditando] = useState<Cuatrimestre | null>(null);
 
   useEffect(() => {
     const fetchCuatrimestres = async () => {
@@ -25,16 +32,73 @@ function GestionCuatrimestre() {
     fetchCuatrimestres();
   }, []);
 
+  const handleCrear = async (cuatrimestre: Cuatrimestre) => {
+    try {
+      const res = await crearCuatrimestre(cuatrimestre);
+      setCuatrimestres((prev) => [...prev, res.data]);
+      alert("✅ Cuatrimestre registrado");
+    } catch (err) {
+      console.error("❌ Error al crear cuatrimestre:", err);
+      alert("❌ No se pudo registrar el cuatrimestre");
+    }
+  };
+
+  const handleEditar = async (cuatrimestre: Cuatrimestre) => {
+    if (cuatrimestre.id == null) {
+      alert("❌ No se puede editar un cuatrimestre sin ID.");
+      return;
+    }
+
+    try {
+      const res = await actualizarCuatrimestre(cuatrimestre.id, cuatrimestre);
+      setCuatrimestres((prev) =>
+        prev.map((c) => (c.id === res.data.id ? res.data : c))
+      );
+      alert("✅ Cuatrimestre actualizado");
+      setCuatrimestreEditando(null);
+    } catch (err) {
+      console.error("❌ Error al editar cuatrimestre:", err);
+      alert("❌ No se pudo actualizar el cuatrimestre");
+    }
+  };
+
+  const handleEliminar = async (id?: number) => {
+    if (id == null) {
+      alert("❌ No se puede eliminar un cuatrimestre sin ID.");
+      return;
+    }
+
+    const confirmar = window.confirm("¿Eliminar este cuatrimestre?");
+    if (!confirmar) return;
+
+    try {
+      await eliminarCuatrimestre(id);
+      setCuatrimestres((prev) => prev.filter((c) => c.id !== id));
+      alert("✅ Cuatrimestre eliminado");
+    } catch (err) {
+      console.error("❌ Error al eliminar cuatrimestre:", err);
+      alert("❌ No se pudo eliminar el cuatrimestre");
+    }
+  };
+
   return (
     <Layout>
       <h2 style={titulo}>📆 Cuatrimestres</h2>
 
       <div style={intro}>
         <p>📌 Aquí verás los cuatrimestres registrados por año y número.</p>
-        <button style={btnAlta}>➕ Dar de alta nuevo cuatrimestre</button>
       </div>
 
-      <CuatrimestreForm />
+      {!cuatrimestreEditando && <CuatrimestreForm onSubmit={handleCrear} />}
+
+      {cuatrimestreEditando && (
+        <Modal onClose={() => setCuatrimestreEditando(null)}>
+          <CuatrimestreForm
+            cuatrimestreInicial={cuatrimestreEditando}
+            onSubmit={handleEditar}
+          />
+        </Modal>
+      )}
 
       <div style={seccionListado}>
         <h3>🗓️ Listado de cuatrimestres</h3>
@@ -47,9 +111,11 @@ function GestionCuatrimestre() {
           <p style={centrado}>⚠️ No hay cuatrimestres registrados.</p>
         ) : (
           <ul style={listaEstilo}>
-            {cuatrimestres.map((c) => (
-              <li key={c.id} style={itemEstilo}>
-                📅 <strong>Cuatrimestre {c.numeroCuatri}</strong> — Año 2025
+            {cuatrimestres.map((c, index) => (
+              <li key={c.id ?? `sin-id-${index}`} style={itemEstilo}>
+                📅 <strong>Cuatrimestre {c.numeroCuatri}</strong>
+                <button onClick={() => setCuatrimestreEditando(c)} style={btnEditar}>✏️</button>
+                <button onClick={() => handleEliminar(c.id)} style={btnEliminar}>🗑️</button>
               </li>
             ))}
           </ul>
@@ -59,6 +125,7 @@ function GestionCuatrimestre() {
   );
 }
 
+// Estilos
 const titulo: React.CSSProperties = {
   textAlign: "center",
   marginBottom: "1rem"
@@ -102,6 +169,26 @@ const itemEstilo: React.CSSProperties = {
   padding: "0.5rem",
   marginBottom: "0.5rem",
   borderRadius: "4px"
+};
+
+const btnEditar: React.CSSProperties = {
+  marginLeft: "1rem",
+  backgroundColor: "#1F5A7A",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.5rem",
+  cursor: "pointer"
+};
+
+const btnEliminar: React.CSSProperties = {
+  marginLeft: "0.5rem",
+  backgroundColor: "#d9534f",
+  color: "white",
+  border: "none",
+  borderRadius: "4px",
+  padding: "0.2rem 0.5rem",
+  cursor: "pointer"
 };
 
 export default GestionCuatrimestre;
