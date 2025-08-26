@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import DocenteForm from "../components/Formularios/DocenteForm";
 import Modal from "../components/Modal";
-import { listarDocentes, crearDocente, eliminarDocente } from "../api/docenteApi";
+import { listarDocentes, crearDocente, eliminarDocente, actualizarDocente } from "../api/docenteApi";
 import { listarCategorias } from "../api/categoriaApi";
 import type { Docente, Categoria } from "../types";
 
@@ -25,11 +25,11 @@ function GestionDocente() {
 
         const map = new Map<number, string>();
         resCategorias.data.forEach((cat: Categoria) => {
-        resCategorias.data.forEach((cat: Categoria) => {
-       if (cat.id != null) {
-           map.set(cat.id, cat.nombre);
-       }
-           });
+          resCategorias.data.forEach((cat: Categoria) => {
+            if (cat.id != null) {
+              map.set(cat.id, cat.nombre);
+            }
+          });
 
         });
         setCategoriasMap(map);
@@ -56,10 +56,15 @@ function GestionDocente() {
   };
 
   const handleEditar = async (docente: Docente) => {
+    if (docente.id == null) {
+      alert("❌ No se puede editar un docente sin ID");
+      return;
+    }
+
     try {
-      const res = await crearDocente(docente); // Reutilizamos POST como reemplazo
+      const actualizado = await actualizarDocente(docente.id, docente);
       setDocentes((prev) =>
-        prev.map((d) => (d.id === res.id ? res : d))
+        prev.map((d) => (d.id === actualizado.id ? actualizado : d))
       );
       alert("✅ Docente actualizado");
       setDocenteEditando(null);
@@ -101,7 +106,7 @@ function GestionDocente() {
             <li key={doc.id} style={itemEstilo}>
               🧑‍🏫 <strong>{doc.nombre}</strong> — {categoriasMap.get(doc.categoriaId ?? -1) ?? "Sin categoría"}
               <button onClick={() => setDocenteEditando(doc)} style={btnEditar}>✏️</button>
-              <button onClick={() => handleEliminar(doc.id)} style={btnEliminar}>🗑️</button>
+              <button onClick={() => doc.id != null && handleEliminar(doc.id)} style={btnEliminar}>🗑️</button>
             </li>
           ))}
         </ul>

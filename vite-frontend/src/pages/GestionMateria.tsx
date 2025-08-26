@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import MateriaForm from "../components/Formularios/MateriaForm";
-import Modal from "../components/Modal"; 
+import Modal from "../components/Modal";
 import {
   listarMaterias,
   actualizarMateria,
@@ -31,7 +31,7 @@ function GestionMateria() {
         const map = new Map<number, string>();
         resPlanes.data.forEach((plan: Plan) => {
           if (plan.id != null) {
-              map.set(plan.id, plan.nombre);
+            map.set(plan.id, plan.nombre);
           }
 
         });
@@ -48,6 +48,12 @@ function GestionMateria() {
   }, []);
 
   const handleEditar = async (materia: Materia) => {
+    if (materia.id == null) {
+      console.warn("❌ No se puede editar una materia sin ID");
+      alert("❌ La materia no tiene ID asignado");
+      return;
+    }
+
     try {
       const actualizada = await actualizarMateria(materia.id, materia);
       setMaterias((prev) =>
@@ -60,7 +66,6 @@ function GestionMateria() {
       alert("❌ No se pudo actualizar la materia");
     }
   };
-
   const handleEliminar = async (id: number) => {
     const confirmar = window.confirm("¿Estás seguro de que querés eliminar esta materia?");
     if (!confirmar) return;
@@ -106,7 +111,7 @@ function GestionMateria() {
             <li key={mat.id} style={itemEstilo}>
               📘 <strong>{mat.nombre}</strong> — Año {mat.anio} — {planesMap.get(mat.planId) ?? "Sin plan"}
               <button onClick={() => setMateriaEditando(mat)} style={btnEditar}>✏️</button>
-              <button onClick={() => handleEliminar(mat.id)} style={btnEliminar}>🗑️</button>
+              <button onClick={() => mat.id != null && handleEliminar(mat.id)} style={btnEliminar}>🗑️</button>
             </li>
           ))}
         </ul>

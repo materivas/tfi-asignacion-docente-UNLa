@@ -23,7 +23,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         setCategorias(res.data);
       } catch (err) {
         console.error("Error al cargar categorías:", err);
-        setError("No se pudieron cargar las categorías.");
+        setError("❌ No se pudieron cargar las categorías.");
       }
     };
 
@@ -39,10 +39,10 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
     }
 
     const docente: Docente = {
-      id: docenteInicial?.id ?? 0,
       nombre,
       dni,
-      categoriaId: Number(categoriaId)
+      categoriaId: Number(categoriaId),
+      ...(docenteInicial?.id != null && { id: docenteInicial.id })
     };
 
     if (onSubmit) {
@@ -54,7 +54,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "auto" }}>
+    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
       <h3 style={{ textAlign: "center" }}>
         {docenteInicial ? "Editar Docente" : "Alta de Docente"}
       </h3>
@@ -65,6 +65,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         value={nombre}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
         required
+        style={inputEstilo}
       />
 
       <label>DNI:</label>
@@ -73,6 +74,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         value={dni}
         onChange={(e: ChangeEvent<HTMLInputElement>) => setDni(e.target.value)}
         required
+        style={inputEstilo}
       />
 
       <label>Categoría:</label>
@@ -83,6 +85,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
           setCategoriaId(value === "" ? "" : Number(value));
         }}
         required
+        style={inputEstilo}
       >
         <option value="">Seleccione</option>
         {categorias.map((cat) => (
@@ -92,9 +95,9 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         ))}
       </select>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={{ color: "red", textAlign: "center", marginTop: "1rem" }}>{error}</p>}
 
-      <button type="submit">
+      <button type="submit" style={btnEstilo}>
         {docenteInicial ? "Guardar cambios" : "Registrar"}
       </button>
 
@@ -102,13 +105,37 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         <button
           type="button"
           onClick={onCancel}
-          style={{ marginTop: "0.5rem", backgroundColor: "#999", color: "white", border: "none", padding: "0.5rem", borderRadius: "4px", cursor: "pointer" }}
+          style={{
+            ...btnEstilo,
+            backgroundColor: "#999",
+            marginTop: "0.5rem"
+          }}
         >
           Cancelar edición
         </button>
       )}
     </form>
   );
+};
+
+const inputEstilo: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  padding: "0.5rem",
+  marginBottom: "1rem",
+  borderRadius: "4px",
+  border: "1px solid #ccc"
+};
+
+const btnEstilo: React.CSSProperties = {
+  backgroundColor: "#7A1F1F",
+  color: "white",
+  padding: "0.5rem 1rem",
+  borderRadius: "6px",
+  fontWeight: "bold",
+  border: "none",
+  cursor: "pointer",
+  width: "100%"
 };
 
 export default DocenteForm;

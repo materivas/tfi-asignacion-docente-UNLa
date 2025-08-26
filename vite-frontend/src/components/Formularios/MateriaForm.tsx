@@ -28,14 +28,12 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
       alert("Completá todos los campos.");
       return;
     }
-
     const materia: Materia = {
-      id: materiaInicial?.id ?? 0,
       nombre,
       planId: Number(planId),
-      anio: Number(anio)
+      anio: Number(anio),
+      ...(materiaInicial?.id != null && { id: materiaInicial.id })
     };
-
     if (onSubmit) {
       await onSubmit(materia);
       setNombre("");
