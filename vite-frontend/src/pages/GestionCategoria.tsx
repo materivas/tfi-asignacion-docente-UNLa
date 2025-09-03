@@ -32,16 +32,19 @@ function GestionCategoria() {
     fetchCategorias();
   }, []);
 
-const handleCrear = async (categoria: Categoria) => {
-  try {
-    const res = await crearCategoria(categoria);
-    setCategorias((prev) => [...prev, res.data]);
-    alert("✅ Categoría registrada");
-  } catch (err) {
-    console.error("❌ Error al crear categoría:", err);
-    alert("❌ No se pudo registrar la categoría");
-  }
-};
+  const handleCrear = async (categoria: Categoria) => {
+    try {
+      const res = await crearCategoria({
+        nombre: categoria.nombre,
+        maxMaterias: categoria.maxMaterias
+      });
+      setCategorias((prev) => [...prev, res.data]);
+      alert("✅ Categoría registrada");
+    } catch (err) {
+      console.error("❌ Error al crear categoría:", err);
+      alert("❌ No se pudo registrar la categoría");
+    }
+  };
 
   const handleEditar = async (categoria: Categoria) => {
     if (categoria.id == null) {
@@ -51,9 +54,7 @@ const handleCrear = async (categoria: Categoria) => {
 
     try {
       const res = await actualizarCategoria(categoria.id, categoria);
-      setCategorias((prev) =>
-        prev.map((c) => (c.id === res.data.id ? res.data : c))
-      );
+      setCategorias((prev) => prev.map((c) => (c.id === res.data.id ? res.data : c)));
       alert("✅ Categoría actualizada");
       setCategoriaEditando(null);
     } catch (err) {
@@ -86,17 +87,19 @@ const handleCrear = async (categoria: Categoria) => {
       <h2 style={titulo}>🎓 Categorías académicas</h2>
 
       <div style={intro}>
-        <p>📌 Aquí verás las categorías cargadas (Titular, Adjunto, etc).</p>
+        <p>📌 Aquí verás las categorías cargadas (Titular, Adjunto, etc.).</p>
       </div>
 
       {loading ? (
         <p style={centrado}>⏳ Cargando categorías...</p>
       ) : error ? (
         <p style={{ ...centrado, color: "red" }}>{error}</p>
+      ) : categorias.length === 0 ? (
+        <p style={centrado}>⚠️ No hay categorías registradas.</p>
       ) : (
         <ul style={listaEstilo}>
-          {categorias.map((cat) => (
-            <li key={cat.id} style={itemEstilo}>
+          {categorias.map((cat, idx) => (
+            <li key={cat.id ?? `sin-id-${idx}`} style={itemEstilo}>
               🏷️ <strong>{cat.nombre}</strong> — Máx. materias: {cat.maxMaterias}
               <button onClick={() => setCategoriaEditando(cat)} style={btnEditar}>✏️</button>
               <button onClick={() => handleEliminar(cat.id)} style={btnEliminar}>🗑️</button>
@@ -105,8 +108,10 @@ const handleCrear = async (categoria: Categoria) => {
         </ul>
       )}
 
+      {/* Alta solo si no estás editando */}
       {!categoriaEditando && <CategoriaForm onSubmit={handleCrear} />}
 
+      {/* Edición en modal */}
       {categoriaEditando && (
         <Modal onClose={() => setCategoriaEditando(null)}>
           <CategoriaForm
@@ -120,7 +125,7 @@ const handleCrear = async (categoria: Categoria) => {
   );
 }
 
-// Estilos
+// Estilos (alineados a las otras páginas)
 const titulo: React.CSSProperties = {
   textAlign: "center",
   marginBottom: "1rem"
@@ -135,27 +140,16 @@ const centrado: React.CSSProperties = {
   textAlign: "center"
 };
 
-const btnAlta: React.CSSProperties = {
-  backgroundColor: "#7A1F1F",
-  color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  border: "none",
-  marginTop: "1rem",
-  cursor: "pointer"
-};
-
 const listaEstilo: React.CSSProperties = {
   listStyleType: "none",
   padding: 0,
-  maxWidth: "400px",
+  maxWidth: "500px",
   margin: "0 auto",
   textAlign: "left"
 };
 
 const itemEstilo: React.CSSProperties = {
-  backgroundColor: "#f4f4f4",
+  backgroundColor: "#fff4f4",
   padding: "0.5rem",
   marginBottom: "0.5rem",
   borderRadius: "4px"

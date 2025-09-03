@@ -48,12 +48,9 @@ function GestionPlan() {
       alert("❌ No se puede editar un plan sin ID.");
       return;
     }
-
     try {
       const res = await actualizarPlan(plan.id, plan);
-      setPlanes((prev) =>
-        prev.map((p) => (p.id === res.data.id ? res.data : p))
-      );
+      setPlanes((prev) => prev.map((p) => (p.id === res.data.id ? res.data : p)));
       alert("✅ Plan actualizado");
       setPlanEditando(null);
     } catch (err) {
@@ -67,7 +64,6 @@ function GestionPlan() {
       alert("❌ No se puede eliminar un plan sin ID.");
       return;
     }
-
     const confirmar = window.confirm("¿Eliminar este plan?");
     if (!confirmar) return;
 
@@ -85,8 +81,32 @@ function GestionPlan() {
     <Layout>
       <h2 style={titulo}>📋 Planes académicos</h2>
 
+      <div style={intro}>
+        <p>📌 Alta, edición y baja de planes académicos.</p>
+      </div>
+
+      {loading ? (
+        <p style={centrado}>⏳ Cargando planes...</p>
+      ) : error ? (
+        <p style={{ ...centrado, color: "red" }}>{error}</p>
+      ) : planes.length === 0 ? (
+        <p style={centrado}>⚠️ No hay planes registrados.</p>
+      ) : (
+        <ul style={listaEstilo}>
+          {planes.map((plan) => (
+            <li key={plan.id ?? plan.nombre} style={itemEstilo}>
+              🗂️ <strong>{plan.nombre}</strong> — {plan.descripcion ?? "Sin descripción"}
+              <button onClick={() => setPlanEditando(plan)} style={btnEditar}>✏️</button>
+              <button onClick={() => handleEliminar(plan.id)} style={btnEliminar}>🗑️</button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Alta solo si no estás editando */}
       {!planEditando && <PlanForm onSubmit={handleCrear} />}
 
+      {/* Edición en modal */}
       {planEditando && (
         <Modal onClose={() => setPlanEditando(null)}>
           <PlanForm
@@ -96,41 +116,19 @@ function GestionPlan() {
           />
         </Modal>
       )}
-
-      <div style={seccionListado}>
-        <h3>📚 Listado de planes</h3>
-
-        {loading ? (
-          <p style={centrado}>⏳ Cargando planes...</p>
-        ) : error ? (
-          <p style={{ ...centrado, color: "red" }}>{error}</p>
-        ) : planes.length === 0 ? (
-          <p style={centrado}>⚠️ No hay planes registrados.</p>
-        ) : (
-          <ul style={listaEstilo}>
-            {planes.map((plan) => (
-              <li key={plan.id} style={itemEstilo}>
-                🗂️ <strong>{plan.nombre}</strong> — {plan.descripcion ?? "Sin descripción"}
-                <button onClick={() => setPlanEditando(plan)} style={btnEditar}>✏️</button>
-                <button onClick={() => handleEliminar(plan.id)} style={btnEliminar}>🗑️</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </Layout>
   );
 }
 
-// Estilos
+// Estilos (alineados a GestionMateria/Cuatrimestre)
 const titulo: React.CSSProperties = {
   textAlign: "center",
   marginBottom: "1rem"
 };
 
-const seccionListado: React.CSSProperties = {
-  marginTop: "2rem",
-  textAlign: "center"
+const intro: React.CSSProperties = {
+  textAlign: "center",
+  marginBottom: "2rem"
 };
 
 const centrado: React.CSSProperties = {
@@ -146,7 +144,7 @@ const listaEstilo: React.CSSProperties = {
 };
 
 const itemEstilo: React.CSSProperties = {
-  backgroundColor: "#f0f0f0",
+  backgroundColor: "#fff4f4",
   padding: "0.5rem",
   marginBottom: "0.5rem",
   borderRadius: "4px"
