@@ -27,4 +27,7 @@ public class Asignacion {
     @JoinColumn(name = "cuatrimestre_id", nullable = false)
     @JsonIgnore
     private Cuatrimestre cuatrimestre;
+    
+    @Column(name = "turno")
+    private String turno;
 }

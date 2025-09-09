@@ -8,20 +8,23 @@ public class AsignacionDto {
     private Long id;
     private Long materiaId;
     private Long cuatrimestreId;
+    private String turno;
 
     public AsignacionDto() {}
 
-    public AsignacionDto(Long id, Long materiaId, Long cuatrimestreId) {
+    public AsignacionDto(Long id, Long materiaId, Long cuatrimestreId, String turno) {
         this.id = id;
         this.materiaId = materiaId;
         this.cuatrimestreId = cuatrimestreId;
+        this.turno = turno;
     }
 
     public static AsignacionDto fromEntity(Asignacion asignacion) {
         return new AsignacionDto(
             asignacion.getId(),
             asignacion.getMateria() != null ? asignacion.getMateria().getId() : null,
-            asignacion.getCuatrimestre() != null ? asignacion.getCuatrimestre().getId() : null
+            asignacion.getCuatrimestre() != null ? asignacion.getCuatrimestre().getId() : null,
+            asignacion.getTurno()
         );
     }
 
@@ -30,6 +33,7 @@ public class AsignacionDto {
         asignacion.setId(dto.getId());
         asignacion.setMateria(materia);
         asignacion.setCuatrimestre(cuatrimestre);
+        asignacion.setTurno(dto.getTurno());
         return asignacion;
     }
 
@@ -56,4 +60,12 @@ public class AsignacionDto {
     public void setCuatrimestreId(Long cuatrimestreId) {
         this.cuatrimestreId = cuatrimestreId;
     }
+
+	public String getTurno() {
+		return turno;
+	}
+
+	public void setTurno(String turno) {
+		this.turno = turno;
+	}
 } 

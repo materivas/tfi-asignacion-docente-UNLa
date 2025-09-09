@@ -39,8 +39,11 @@ public class AsignacionService {
         Materia materia = materiaRepository.findById(dto.getMateriaId())
             .orElseThrow(() -> new RuntimeException("Materia no encontrada"));
         Cuatrimestre cuatrimestre = cuatrimestreRepository.findById(dto.getCuatrimestreId())
-            .orElseThrow(() -> new RuntimeException("Cuatrimestre no encontrado"));
+            .orElseThrow(() -> new RuntimeException("Cuatrimestre no encontrada"));
+
         var asignacion = AsignacionDto.toEntity(dto, materia, cuatrimestre);
+        asignacion.setId(null); 
+
         return AsignacionDto.fromEntity(asignacionRepository.save(asignacion));
     }
 
