@@ -7,6 +7,7 @@ import GestionCuatrimestre from './pages/GestionCuatrimestre';
 import GestionPlan from './pages/GestionPlan';
 import GestionMateria from './pages/GestionMateria';
 import GestionDocente from './pages/GestionDocente';
+import GestionAsignacion from './pages/GestionAsignacion';
 
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
@@ -23,7 +24,8 @@ function App() {
         <Route path="/gestionCategoria" element={<GestionCategoria />} />
         <Route path="/gestionDocente" element={<GestionDocente />} />
         <Route path="/gestionPlan" element={<GestionPlan />} />
-        <Route path="/gestionMateria" element={<GestionMateria />} />        
+        <Route path="/gestionMateria" element={<GestionMateria />} /> 
+        <Route path="/gestionAsignacion" element={<GestionAsignacion />} />          
       </Routes>
     </Layout>
   );

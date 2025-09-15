@@ -11,6 +11,7 @@ function Gestion() {
   <Link to="/gestionPlan" style={linkEstilo}>Planes</Link>
   <Link to="/gestionMateria" style={linkEstilo}>Materias</Link>
   <Link to="/gestionCuatrimestre" style={linkEstilo}>Cuatrimestres</Link>
+  <Link to="/gestionAsignacion" style={linkEstilo}>Asignacion</Link>
 </div>
 
     </Layout>

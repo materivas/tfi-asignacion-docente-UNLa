@@ -29,5 +29,13 @@ export type Categoria = {
   maxMaterias: number;
 };
 
+export type Asignacion = {
+  id?: number;
+  materiaId: number;
+  cuatrimestreId: number;
+  turno: string;
+};
+
+
 
 
