@@ -20,10 +20,11 @@ const AsignacionForm: React.FC<Props> = ({
   const [materiaId, setMateriaID] = useState<number | "">(AsignacionInicial?.materiaId ?? "");
   const [cuatrimestreId, setCuatrimestreID] = useState<number | "">(AsignacionInicial?.cuatrimestreId ?? "");
   const [turno, setTurno] = useState<string>(AsignacionInicial?.turno ?? "");
+  const [anio, setAnio] = useState<number | "">(AsignacionInicial?.anio ?? "");
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!materiaId || !cuatrimestreId || turno === "") {
+    if (!materiaId || !cuatrimestreId || turno === "" || anio === "") {
       alert("Completá todos los campos.");
       return;
     }
@@ -32,6 +33,7 @@ const AsignacionForm: React.FC<Props> = ({
       materiaId: Number(materiaId),
       cuatrimestreId: Number(cuatrimestreId),
       turno,
+      anio: Number(anio),
       ...(AsignacionInicial?.id && { id: AsignacionInicial.id })
     };
 
@@ -94,6 +96,15 @@ const AsignacionForm: React.FC<Props> = ({
         <option value="Tarde">Tarde</option>
         <option value="Noche">Noche</option>
       </select>
+
+      <label>Año:</label>
+      <input
+        type="number"
+        value={anio}
+        onChange={(e) => setAnio(Number(e.target.value))}
+        required
+        style={inputEstilo}
+      />
 
       <button type="submit" style={btnEstilo}>
         {AsignacionInicial ? "Guardar cambios" : "Registrar"}

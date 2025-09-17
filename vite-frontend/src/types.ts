@@ -8,7 +8,7 @@ export interface Materia {
   id?: number;
   nombre: string;
   planId: number;
-  anio: number;
+  //anio: number;
 }
 
 export interface Docente { 
@@ -34,6 +34,7 @@ export type Asignacion = {
   materiaId: number;
   cuatrimestreId: number;
   turno: string;
+  anio: number;
 };
 
 

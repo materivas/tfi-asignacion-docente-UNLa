@@ -93,7 +93,7 @@ function GestionAsignacion() {
       <h2 style={titulo}>📚 Asignaciones</h2>
 
       <div style={intro}>
-        <p>📌 Aquí verás las asignaciones registradas por materia, cuatrimestre y turno.</p>
+        <p>📌 Aquí verás las asignaciones registradas por materia, cuatrimestre, turno y año.</p>
       </div>
 
       {loading ? (
@@ -109,9 +109,16 @@ function GestionAsignacion() {
             const cuatri = cuatrimestres.find((c) => c.id === asig.cuatrimestreId);
             return (
               <li key={asig.id} style={itemEstilo}>
-                📘 <strong>{materia?.nombre ?? "Materia desconocida"}</strong> — Cuatrimestre {cuatri?.numeroCuatri ?? "?"} — Turno {asig.turno}
-                <button onClick={() => setAsignacionEditando(asig)} style={btnEditar}>✏️</button>
-                <button onClick={() => asig.id != null && handleEliminar(asig.id)} style={btnEliminar}>🗑️</button>
+                <div style={infoEstilo}>
+                  <strong>📘 {materia?.nombre ?? "Materia desconocida"}</strong><br />
+                  Cuatrimestre: {cuatri?.numeroCuatri ?? "?"}<br />
+                  Turno: {asig.turno}<br />
+                  Año: {asig.anio ?? "?"}
+                </div>
+                <div style={accionesEstilo}>
+                  <button onClick={() => setAsignacionEditando(asig)} style={btnEditar}>✏️</button>
+                  <button onClick={() => asig.id != null && handleEliminar(asig.id)} style={btnEliminar}>🗑️</button>
+                </div>
               </li>
             );
           })}
@@ -177,19 +184,34 @@ const btnEliminar: React.CSSProperties = {
   cursor: "pointer"
 };
 
+
+
+const infoEstilo: React.CSSProperties = {
+  fontFamily: "Segoe UI, sans-serif",
+  fontSize: "0.95rem",
+  lineHeight: "1.5",
+  marginBottom: "0.5rem"
+};
+
+const accionesEstilo: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "0.5rem"
+};
+
 const listaEstilo: React.CSSProperties = {
   listStyleType: "none",
   padding: 0,
-  maxWidth: "500px",
+  maxWidth: "700px", // ampliado
   margin: "0 auto",
   textAlign: "left"
 };
 
 const itemEstilo: React.CSSProperties = {
-  backgroundColor: "#fff4f4",
-  padding: "0.5rem",
-  marginBottom: "0.5rem",
-  borderRadius: "4px"
+  backgroundColor: "#f9f9f9", // más neutro
+  padding: "1rem",
+  marginBottom: "1rem",
+  borderRadius: "6px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
 };
-
 export default GestionAsignacion;

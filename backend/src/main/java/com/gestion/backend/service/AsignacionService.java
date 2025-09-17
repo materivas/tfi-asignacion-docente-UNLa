@@ -56,6 +56,7 @@ public class AsignacionService {
             asignacion.setMateria(materia);
             asignacion.setCuatrimestre(cuatrimestre);
             asignacion.setTurno(dto.getTurno());
+            asignacion.setAnio(dto.getAnio());
             return AsignacionDto.fromEntity(asignacionRepository.save(asignacion));
         }).orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
     }

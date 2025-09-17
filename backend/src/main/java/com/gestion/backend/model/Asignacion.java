@@ -30,4 +30,8 @@ public class Asignacion {
     
     @Column(name = "turno")
     private String turno;
+    
+    @Column(name = "anio")
+    private Integer anio;
 }
+

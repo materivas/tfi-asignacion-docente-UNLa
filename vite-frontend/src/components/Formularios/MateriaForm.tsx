@@ -12,7 +12,6 @@ interface Props {
 const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCancel }) => {
   const [nombre, setNombre] = useState(materiaInicial?.nombre ?? "");
   const [planId, setPlanId] = useState<number | "">(materiaInicial?.planId ?? "");
-  const [anio, setAnio] = useState<number | "">(materiaInicial?.anio ?? "");
 
   if (!planes || !Array.isArray(planes)) {
     return (
@@ -24,21 +23,21 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!nombre || planId === "" || anio === "") {
+    if (!nombre || planId === "") {
       alert("Completá todos los campos.");
       return;
     }
+
     const materia: Materia = {
       nombre,
       planId: Number(planId),
-      anio: Number(anio),
       ...(materiaInicial?.id != null && { id: materiaInicial.id })
     };
+
     if (onSubmit) {
       await onSubmit(materia);
       setNombre("");
       setPlanId("");
-      setAnio("");
     }
   };
 
@@ -71,15 +70,6 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
         ))}
       </select>
 
-      <label>Año:</label>
-      <input
-        type="number"
-        value={anio}
-        onChange={(e) => setAnio(Number(e.target.value))}
-        required
-        style={inputEstilo}
-      />
-
       <button type="submit" style={btnEstilo}>
         {materiaInicial ? "Guardar cambios" : "Registrar"}
       </button>
@@ -88,11 +78,7 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
         <button
           type="button"
           onClick={onCancel}
-          style={{
-            ...btnEstilo,
-            backgroundColor: "#999",
-            marginTop: "0.5rem"
-          }}
+          style={{ ...btnEstilo, backgroundColor: "#999", marginTop: "0.5rem" }}
         >
           Cancelar edición
         </button>

@@ -33,7 +33,6 @@ function GestionMateria() {
           if (plan.id != null) {
             map.set(plan.id, plan.nombre);
           }
-
         });
         setPlanesMap(map);
       } catch (err) {
@@ -66,6 +65,7 @@ function GestionMateria() {
       alert("❌ No se pudo actualizar la materia");
     }
   };
+
   const handleEliminar = async (id: number) => {
     const confirmar = window.confirm("¿Estás seguro de que querés eliminar esta materia?");
     if (!confirmar) return;
@@ -96,7 +96,7 @@ function GestionMateria() {
       <h2 style={titulo}>📖 Materias</h2>
 
       <div style={intro}>
-        <p>📌 Aquí verás las materias registradas según año y plan.</p>
+        <p>📌 Aquí verás las materias registradas según su plan académico.</p>
       </div>
 
       {loading ? (
@@ -109,7 +109,7 @@ function GestionMateria() {
         <ul style={listaEstilo}>
           {materias.map((mat) => (
             <li key={mat.id} style={itemEstilo}>
-              📘 <strong>{mat.nombre}</strong> — Año {mat.anio} — {planesMap.get(mat.planId) ?? "Sin plan"}
+              📘 <strong>{mat.nombre}</strong> — {planesMap.get(mat.planId) ?? "Sin plan"}
               <button onClick={() => setMateriaEditando(mat)} style={btnEditar}>✏️</button>
               <button onClick={() => mat.id != null && handleEliminar(mat.id)} style={btnEliminar}>🗑️</button>
             </li>
@@ -117,7 +117,6 @@ function GestionMateria() {
         </ul>
       )}
 
-      {/* Alta solo si no estás editando */}
       {!materiaEditando && (
         <MateriaForm
           planes={Array.from(planesMap.entries()).map(([id, nombre]) => ({ id, nombre }))}
@@ -125,7 +124,6 @@ function GestionMateria() {
         />
       )}
 
-      {/* Edición en modal */}
       {materiaEditando && (
         <Modal onClose={() => setMateriaEditando(null)}>
           <MateriaForm
