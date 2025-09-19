@@ -113,6 +113,7 @@ function GestionAsignacion() {
                   <strong>📘 {materia?.nombre ?? "Materia desconocida"}</strong><br />
                   Cuatrimestre: {cuatri?.numeroCuatri ?? "?"}<br />
                   Turno: {asig.turno}<br />
+                  Día: {asig.dia ?? "?"}<br />
                   Año: {asig.anio ?? "?"}
                 </div>
                 <div style={accionesEstilo}>

@@ -26,5 +26,7 @@ public class Materia {
     @JsonIgnore
     private Plan plan;
 
+    @Column(name = "anio")
+    private Integer anio;
     
 }

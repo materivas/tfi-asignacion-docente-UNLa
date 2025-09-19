@@ -12,6 +12,7 @@ interface Props {
 const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCancel }) => {
   const [nombre, setNombre] = useState(materiaInicial?.nombre ?? "");
   const [planId, setPlanId] = useState<number | "">(materiaInicial?.planId ?? "");
+  const [anio, setAnio] = useState<number | "">(materiaInicial?.anio ?? "");
 
   if (!planes || !Array.isArray(planes)) {
     return (
@@ -23,13 +24,14 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!nombre || planId === "") {
+    if (!nombre || planId === "" || anio==="") {
       alert("Completá todos los campos.");
       return;
     }
 
     const materia: Materia = {
       nombre,
+      anio: Number(anio),
       planId: Number(planId),
       ...(materiaInicial?.id != null && { id: materiaInicial.id })
     };
@@ -54,6 +56,15 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
         required
         style={inputEstilo}
       />
+
+      <label>Año en la carrera:</label>
+<input
+  type="number"
+  value={anio}
+  onChange={(e) => setAnio(Number(e.target.value))}
+  required
+  style={inputEstilo}
+/>
 
       <label>Plan académico:</label>
       <select

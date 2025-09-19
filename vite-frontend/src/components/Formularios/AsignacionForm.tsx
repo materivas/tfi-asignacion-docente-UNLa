@@ -21,20 +21,30 @@ const AsignacionForm: React.FC<Props> = ({
   const [cuatrimestreId, setCuatrimestreID] = useState<number | "">(AsignacionInicial?.cuatrimestreId ?? "");
   const [turno, setTurno] = useState<string>(AsignacionInicial?.turno ?? "");
   const [anio, setAnio] = useState<number | "">(AsignacionInicial?.anio ?? "");
+  const [dia, setDia] = useState<string>(AsignacionInicial?.dia ?? "");
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!materiaId || !cuatrimestreId || turno === "" || anio === "") {
+    if (!materiaId || !cuatrimestreId || turno === "" || anio === "" || dia === "") {
       alert("Completá todos los campos.");
       return;
     }
 
-    const nuevaAsignacion: Asignacion = {
+const nuevaAsignacion: Asignacion = AsignacionInicial?.id
+  ? {
+      id: AsignacionInicial.id,
       materiaId: Number(materiaId),
       cuatrimestreId: Number(cuatrimestreId),
       turno,
       anio: Number(anio),
-      ...(AsignacionInicial?.id && { id: AsignacionInicial.id })
+      dia
+    }
+  : {
+      materiaId: Number(materiaId),
+      cuatrimestreId: Number(cuatrimestreId),
+      turno,
+      anio: Number(anio),
+      dia
     };
 
     onSubmit?.(nuevaAsignacion);
@@ -92,9 +102,25 @@ const AsignacionForm: React.FC<Props> = ({
         style={inputEstilo}
       >
         <option value="">Seleccione</option>
-        <option value="Mañana">Mañana</option>
+        <option value="Maniana">Mañana</option>
         <option value="Tarde">Tarde</option>
         <option value="Noche">Noche</option>
+      </select>
+
+      <label>Día:</label>
+      <select
+        value={dia}
+        onChange={(e) => setDia(e.target.value)}
+        required
+        style={inputEstilo}
+      >
+        <option value="">Seleccione</option>
+        <option value="Lunes">Lunes</option>
+        <option value="Martes">Martes</option>
+        <option value="Miercoles">Miercoles</option>
+        <option value="Jueves">Jueves</option>
+        <option value="Viernes">Viernes</option>
+        <option value="Sabado">Sabado</option>
       </select>
 
       <label>Año:</label>
