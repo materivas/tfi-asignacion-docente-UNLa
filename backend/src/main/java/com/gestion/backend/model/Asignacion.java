@@ -33,5 +33,8 @@ public class Asignacion {
     
     @Column(name = "anio")
     private Integer anio;
+    
+    @Column(name = "dia")
+    private String dia;
 }
 

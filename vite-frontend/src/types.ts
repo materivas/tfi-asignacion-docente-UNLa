@@ -8,7 +8,7 @@ export interface Materia {
   id?: number;
   nombre: string;
   planId: number;
-  //anio: number;
+  anio: number;
 }
 
 export interface Docente { 
@@ -35,8 +35,17 @@ export type Asignacion = {
   cuatrimestreId: number;
   turno: string;
   anio: number;
+  dia: string;
 };
 
-
+export interface AsignacionDocente {
+  id: number;
+  asignacionId: number;
+  docenteId: number;
+  docenteNombre: string; // asumimos que el backend lo expone en el DTO
+  rolId: number;
+  horasAsignadas: number;
+  confirmado: boolean;
+}
 
 

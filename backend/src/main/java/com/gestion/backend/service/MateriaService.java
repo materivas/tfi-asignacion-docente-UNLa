@@ -43,7 +43,7 @@ public class MateriaService {
         return materiaRepository.findById(id).map(materia -> {
             materia.setNombre(dto.getNombre());
             materia.setPlan(plan);
-          //  materia.setAnio(dto.getAnio());
+            materia.setAnio(dto.getAnio());
             return MateriaDto.fromEntity(materiaRepository.save(materia));
         }).orElseThrow(() -> new RuntimeException("Materia no encontrada"));
     }

@@ -1,9 +1,484 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente } from "../types";
+import { listarAsignaciones } from "../api/asignacionApi";
+import { listarMaterias } from "../api/materiaApi";
+import { listarAsignacionesDocentes } from "../api/asignacionDocenteApi";
+import { listarCategorias } from "../api/categoriaApi";
+import { listarDocentes } from "../api/docenteApi";
+// Nuevo: endpoint de cuatrimestres (asegurate de tenerlo en tu api)
+import { listarCuatrimestres } from "../api/cuatrimestreApi";
+
+const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
+const turnos = ["Maniana", "Tarde", "Noche"];
+const anios = [1, 2, 3, 4, 5];
+
 function Tablero() {
+  const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
+  const [materias, setMaterias] = useState<Materia[]>([]);
+  const [asignacionesDocentes, setAsignacionesDocentes] = useState<AsignacionDocente[]>([]);
+  const [categoriasMap, setCategoriasMap] = useState<Map<number, string>>(new Map());
+  const [docentesLookup, setDocentesLookup] = useState<Map<number, Docente>>(new Map());
+  const [cuatrimestresMap, setCuatrimestresMap] = useState<Map<number, number>>(new Map()); // id -> numero_cuatri
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // filtros
+  const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">(""); // número de cuatrimestre (1 o 2) o ""
+  const [filtroAnioAsignacion, setFiltroAnioAsignacion] = useState<number | "">(2025);
+  const [filtroMateria, setFiltroMateria] = useState<string>("");
+  const [filtroDocente, setFiltroDocente] = useState<string>("");
+  const [filtroTurno, setFiltroTurno] = useState<string | "">("");
+  const [filtroCategoria, setFiltroCategoria] = useState<number | "">("");
+
+  const [hoveredRowKey, setHoveredRowKey] = useState<string | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  const HEADER_COLOR = "#7A1F1F";
+  const HEADER_GRADIENT = `linear-gradient(180deg, ${HEADER_COLOR} 0%, #5a1414 100%)`;
+
+  const fetchData = async () => {
+    setRefreshing(true);
+    try {
+      setLoading(true);
+      const [resAsignaciones, resMaterias, resAsignacionesDocentes, resCategorias, resDocentes, resCuatrimestres] = await Promise.all([
+        listarAsignaciones(),
+        listarMaterias(),
+        listarAsignacionesDocentes(),
+        listarCategorias(),
+        listarDocentes(),
+        listarCuatrimestres()
+      ]);
+
+      const asignacionesArray: Asignacion[] = Array.isArray(resAsignaciones) ? resAsignaciones : (resAsignaciones as any)?.data ?? [];
+      const materiasArray: Materia[] = Array.isArray(resMaterias) ? resMaterias : (resMaterias as any)?.data ?? [];
+      const asignacionesDocentesArray: AsignacionDocente[] = Array.isArray(resAsignacionesDocentes)
+        ? resAsignacionesDocentes
+        : (resAsignacionesDocentes as any)?.data ?? [];
+
+      setAsignaciones(asignacionesArray);
+      setMaterias(materiasArray);
+      setAsignacionesDocentes(asignacionesDocentesArray);
+
+      const categoriasArray: Categoria[] = Array.isArray(resCategorias) ? resCategorias : (resCategorias as any)?.data ?? [];
+      const mapCat = new Map<number, string>();
+      categoriasArray.forEach((c) => { if (c?.id != null) mapCat.set(c.id, c.nombre); });
+      setCategoriasMap(mapCat);
+
+      const resDocentesSafe: unknown = resDocentes;
+      const docentesArray: Docente[] = Array.isArray(resDocentesSafe)
+        ? (resDocentesSafe as Docente[])
+        : ((resDocentesSafe as any)?.data ?? (resDocentesSafe as any)) || [];
+
+      const mapDoc = new Map<number, Docente>();
+      docentesArray.forEach((d) => { if (d?.id != null) mapDoc.set(d.id, d); });
+      setDocentesLookup(mapDoc);
+
+      // procesar cuatrimestres: esperamos objetos con { id, numero_cuatri }
+      const cuatArray: any[] = Array.isArray(resCuatrimestres) ? resCuatrimestres : (resCuatrimestres as any)?.data ?? [];
+      const cuatMap = new Map<number, number>();
+      cuatArray.forEach((c) => {
+        const id = c?.id;
+        const num = c?.numero_cuatri ?? c?.numeroCuatri ?? c?.numero_cuatrimestre ?? null;
+        if (id != null && num != null) cuatMap.set(Number(id), Number(num));
+      });
+      setCuatrimestresMap(cuatMap);
+    } catch (err) {
+      console.error("❌ Error al cargar el tablero:", err);
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void fetchData(); }, []);
+
+  const getMateria = (id: number) => materias.find((m) => m.id === id);
+  const getAsignacionesDocentes = (asignacionId: number) =>
+    asignacionId != null ? asignacionesDocentes.filter((ad) => ad.asignacionId === asignacionId) : [];
+
+  const getColorPorCarga = (docenteId: number, fallbackRolId?: number | null) => {
+    const cantidad = calcularCargaDocente(docenteId);
+    const docente = docentesLookup.get(docenteId);
+    const categoriaId = docente?.categoriaId ?? fallbackRolId;
+    const categoriaNombre = categoriaId != null ? (categoriasMap.get(categoriaId) ?? "").toLowerCase() : "";
+
+    const esTitular = categoriaNombre.includes("tit");
+    const esAuxiliar = categoriaNombre.includes("aux");
+
+    if (esTitular) {
+      if (cantidad > 6) return "#d9534f";
+      if (cantidad >= 4) return "#f0ad4e";
+      return "#5cb85c";
+    }
+
+    if (esAuxiliar) {
+      if (cantidad >= 3) return "#d9534f";
+      if (cantidad === 2) return "#f0ad4e";
+      return "#5cb85c";
+    }
+
+    if (cantidad > 6) return "#d9534f";
+    if (cantidad >= 4) return "#f0ad4e";
+    return "#5cb85c";
+  };
+
+  // Helper: obtener numero_cuatri desde asignacion.cuatrimestreId usando cuatrimestresMap
+  const extraerNumeroCuatrimestre = (a: Asignacion): number | null => {
+    const maybe = (a as any);
+    // Si la asignacion ya trae objeto cuatrimestre con numero, priorizarlo
+    const cand =
+      maybe.cuatrimestre?.numero_cuatri ??
+      maybe.cuatrimestre?.numeroCuatri ??
+      maybe.cuatrimestre?.numero_cuatrimestre ??
+      maybe.numero_cuatri ??
+      maybe.numeroCuatri ??
+      null;
+    if (cand != null) {
+      const n = Number(cand);
+      if (!Number.isNaN(n)) return n;
+    }
+    // si sólo tenemos cuatrimestreId, buscar en el mapa traído de la API de cuatrimestres
+    const cid = maybe.cuatrimestreId ?? maybe.cuatrimestre_id ?? maybe.cuatrimestreId;
+    if (cid != null) {
+      const mapped = cuatrimestresMap.get(Number(cid));
+      if (mapped != null) return mapped;
+    }
+    return null;
+  };
+
+  const getAsignacionesPorDiaTurnoAnio = (dia: string, turno: string, anio: number) =>
+    asignaciones
+      .filter((a) => {
+        // filtro por número de cuatrimestre (1 o 2). Si filtro vacío -> todo
+        if (filtroCuatrimestre !== "") {
+          const nro = extraerNumeroCuatrimestre(a);
+          if (nro == null) return false;
+          if (nro !== Number(filtroCuatrimestre)) return false;
+        }
+
+        if (filtroAnioAsignacion !== "" && a.anio !== filtroAnioAsignacion) return false;
+        if (filtroTurno && a.turno !== filtroTurno) return false;
+        const materia = getMateria(a.materiaId);
+        if (!materia) return false;
+        if (materia.anio !== anio) return false;
+        if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.trim().toLowerCase())) return false;
+        return a.dia === dia && a.turno === turno;
+      })
+      .sort((a, b) => {
+        const nombreA = getMateria(a.materiaId)?.nombre ?? "";
+        const nombreB = getMateria(b.materiaId)?.nombre ?? "";
+        return nombreA.localeCompare(nombreB);
+      });
+
+  const docentePasaFiltrosGlobales = (d: AsignacionDocente) => {
+    const nombreFromLookup = docentesLookup.get(d.docenteId)?.nombre ?? d.docenteNombre ?? "";
+    if (filtroDocente && !nombreFromLookup.toLowerCase().includes(filtroDocente.toLowerCase())) return false;
+    const categoriaReal = docentesLookup.get(d.docenteId)?.categoriaId ?? d.rolId;
+    if (filtroCategoria !== "" && categoriaReal !== filtroCategoria) return false;
+    return true;
+  };
+
+  // NUEVO: mapa de apariciones visibles por docente (suma +1 por cada aparición en la galería)
+  const docentesCargaMap = useMemo(() => {
+    const m = new Map<number, number>();
+    const anoFiltro = filtroAnioAsignacion === "" ? null : Number(filtroAnioAsignacion);
+
+    asignaciones.forEach((a) => {
+      // filtros de asignación previos a contar
+      if (anoFiltro != null && a.anio !== anoFiltro) return;
+      if (filtroCuatrimestre !== "") {
+        const nro = extraerNumeroCuatrimestre(a);
+        if (nro == null || nro !== Number(filtroCuatrimestre)) return;
+      }
+      if (filtroTurno && a.turno !== filtroTurno) return;
+
+      const materia = getMateria(a.materiaId);
+      if (!materia) return;
+      if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.trim().toLowerCase())) return;
+
+      // docentes confirmados de esa asignación, que además pasen filtros globales
+      const docs = (a.id != null ? getAsignacionesDocentes(a.id) : [])
+        .filter((ad) => ad.confirmado === true)
+        .filter(docentePasaFiltrosGlobales);
+
+      docs.forEach((ad) => {
+        m.set(ad.docenteId, (m.get(ad.docenteId) || 0) + 1);
+      });
+    });
+
+    return m;
+  }, [
+    asignaciones,
+    asignacionesDocentes,
+    filtroAnioAsignacion,
+    filtroCuatrimestre,
+    filtroTurno,
+    filtroMateria,
+    filtroDocente,
+    filtroCategoria,
+    cuatrimestresMap
+  ]);
+
+  // AHORA: calcularCargaDocente lee del mapa de apariciones visibles
+  const calcularCargaDocente = (docenteId: number) => {
+    return docentesCargaMap.get(docenteId) || 0;
+  };
+
+  // cuatrimestresDisponibles ahora construye la lista de numeros encontrados en el mapa o en asignaciones
+  const cuatrimestresDisponibles = useMemo(() => {
+    const s = new Set<number>();
+    // preferir el mapa de cuatrimestres traído
+    if (cuatrimestresMap.size > 0) {
+      cuatrimestresMap.forEach((num) => s.add(num));
+    } else {
+      asignaciones.forEach((a) => {
+        const n = extraerNumeroCuatrimestre(a);
+        if (n != null) s.add(n);
+      });
+    }
+    if (s.size === 0) { s.add(1); s.add(2); }
+    return Array.from(s).sort((x, y) => x - y);
+  }, [cuatrimestresMap, asignaciones]);
+
+  const aniosAsignacionDisponibles = useMemo(() => {
+    const s = new Set<number>();
+    asignaciones.forEach((a) => { if (typeof a.anio === "number") s.add(a.anio); });
+    if (!s.has(2025)) s.add(2025);
+    return Array.from(s).sort((x, y) => x - y);
+  }, [asignaciones]);
+
+  const materiasDisponibles = useMemo(() => materias.map((m) => m.nombre).filter(Boolean), [materias]);
+
+  const resetFiltros = () => {
+    setFiltroCuatrimestre("");
+    setFiltroAnioAsignacion(2025);
+    setFiltroMateria("");
+    setFiltroDocente("");
+    setFiltroTurno("");
+    setFiltroCategoria("");
+  };
+
+  const filtrosActivos = useMemo(() => {
+    let c = 0;
+    if (filtroCuatrimestre !== "") c++;
+    if (filtroAnioAsignacion !== "") c++;
+    if (filtroMateria.trim() !== "") c++;
+    if (filtroDocente.trim() !== "") c++;
+    if (filtroTurno !== "") c++;
+    if (filtroCategoria !== "") c++;
+    return c;
+  }, [filtroCuatrimestre, filtroAnioAsignacion, filtroMateria, filtroDocente, filtroTurno, filtroCategoria]);
+
+  const noop = () => {};
+
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Tablero Docente</h2>
-      <p>Acá vas a ver visualmente las asignaciones, horarios y conflictos.</p>
+    <div style={{ padding: "1.5rem", fontFamily: "Inter, Arial, sans-serif" }}>
+      <style>{`
+        .field { height: 38px; border-radius: 10px; border: 1px solid #dfe3e6; padding: 0 12px; background: #fff; transition: box-shadow .12s, border-color .12s; }
+        .field:focus-visible { outline: none; border-color: ${HEADER_COLOR}; box-shadow: 0 0 0 4px rgba(122,31,31,0.12); }
+        .select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, #7a7a7a 50%), linear-gradient(135deg, #7a7a7a 50%, transparent 50%), linear-gradient(to right, #fff, #fff); background-position: calc(100% - 18px) 16px, calc(100% - 13px) 16px, 100% 0; background-size: 5px 5px, 5px 5px, 2.5em 100%; background-repeat: no-repeat; }
+        .badge-empty { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:#fdecea; color:#a83a2e; font-weight:700; font-size:12px; border:1px solid rgba(217,83,79,0.12); }
+        .card-title { font-size:16px; font-weight:800; color:#111827; }
+        .card-sub { font-size:13px; color:#666666; margin-top:4px; }
+        .cell-scroll { max-height: 260px; overflow-y: auto; padding-right: 6px; display:flex; flex-direction:column; gap:12px; }
+        .action-small { height:34px; width:34px; border-radius:8px; border:1px solid #e2e8f0; background:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+      `}</style>
+
+      <h2 style={{ textAlign: "center", marginBottom: 10, fontSize: 22 }}>🗂️ Tablero Docente</h2>
+
+      <div style={{
+        background: "#fff", border: "1px solid #e6e9eb", borderRadius: 12, padding: 12, marginBottom: 12, boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
+      }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 140 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Cuatrimestre</div>
+            <select className="field select" value={filtroCuatrimestre} onChange={(e) => setFiltroCuatrimestre(e.target.value === "" ? "" : Number(e.target.value))}>
+              <option value="">Todos</option>
+              {cuatrimestresDisponibles.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 140 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Año asignación</div>
+            <select className="field select" value={filtroAnioAsignacion} onChange={(e) => setFiltroAnioAsignacion(e.target.value === "" ? "" : Number(e.target.value))}>
+              <option value="">Todos</option>
+              {aniosAsignacionDisponibles.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 240, flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Materia</div>
+            <input className="field" placeholder="Buscar materia por nombre" value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} list="materias-list" />
+            <datalist id="materias-list">{materiasDisponibles.map((m) => <option key={m} value={m} />)}</datalist>
+          </div>
+
+          {/* filtro de docente con datalist */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 220, flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Docente</div>
+            <input
+              className="field"
+              placeholder="Buscar nombre docente"
+              value={filtroDocente}
+              onChange={(e) => setFiltroDocente(e.target.value)}
+              list="docentes-list"
+            />
+            <datalist id="docentes-list">
+              {Array.from(docentesLookup.values()).map((d) => (
+                <option key={d.id} value={d.nombre} />
+              ))}
+            </datalist>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 160 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Categoría</div>
+            <select className="field select" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))}>
+              <option value="">Todas</option>
+              {Array.from(categoriasMap.entries()).map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 140 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Turno</div>
+            <select className="field select" value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value === "" ? "" : e.target.value)}>
+              <option value="">Todos</option>
+              {turnos.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            {filtrosActivos > 0 && <div style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>{filtrosActivos} activo{filtrosActivos>1?"s":""}</div>}
+            <button onClick={resetFiltros} style={{ height: 38, borderRadius: 10, border: "1px solid #e0e0e0", background: "#f8f9fa", color: "#374151", padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Limpiar</button>
+
+            <button
+              onClick={() => { void fetchData(); }}
+              disabled={refreshing}
+              style={{
+                height: 38,
+                borderRadius: 10,
+                border: "1px solid #d7a4a4",
+                background: refreshing ? "#f4d6d6" : "#fff",
+                color: "#7A1F1F",
+                padding: "0 12px",
+                fontWeight: 800,
+                cursor: refreshing ? "default" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8
+              }}
+              title="Actualizar datos (manual)"
+            >
+              {refreshing ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <p style={{ textAlign: "center" }}>⏳ Cargando asignaciones...</p>
+      ) : (
+        <div ref={wrapperRef} style={{ overflow: "auto", maxHeight: "78vh", border: "1px solid #e6e9eb", borderRadius: 10, background: "#fff", position: "relative", isolation: "isolate" }}>
+          <table style={{ borderCollapse: "separate", borderSpacing: 0, minWidth: 1800, width: "100%", background: "#fff" }}>
+            <thead>
+              <tr>
+                <th style={{ background: HEADER_GRADIENT, border: "1px solid rgba(255,255,255,0.08)", width: 150, height: 58, position: "sticky", left: 0, top: 0, zIndex: 70, pointerEvents: "none" }} aria-hidden />
+                {diasSemana.map((dia) => (
+                  <th key={dia} style={{ background: HEADER_GRADIENT, color: "white", padding: "0.9rem", textAlign: "center", fontWeight: 800, border: "1px solid rgba(255,255,255,0.08)", fontSize: 15, letterSpacing: "0.5px", textTransform: "uppercase", position: "sticky", top: 0, zIndex: 50 }}>{dia}</th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {anios.map((anio) =>
+                turnos.map((turno) => {
+                  const rowKey = `${anio}-${turno}`;
+                  const isHovered = hoveredRowKey === rowKey;
+
+                  return (
+                    <tr key={`anio${anio}-turno${turno}`} onMouseEnter={() => setHoveredRowKey(rowKey)} onMouseLeave={() => setHoveredRowKey(null)} style={{ minHeight: 120 }}>
+                      <td style={{ position: "sticky", left: 0, zIndex: 60, background: HEADER_GRADIENT, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 6, padding: "0.9rem 0.6rem", minWidth: 150, minHeight: 58, boxShadow: isHovered ? "3px 0 12px rgba(0,0,0,0.18)" : "2px 0 8px rgba(0,0,0,0.12)", borderRight: "1px solid rgba(255,255,255,0.1)", color: "#fff", whiteSpace: "nowrap", overflow: "visible" }}>
+                        <div style={{ fontSize: 14, fontWeight: 900 }}>{anio}°</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, background: "rgba(255,255,255,0.12)", padding: "2px 8px", borderRadius: 999 }}>{turno}</div>
+                      </td>
+
+                      {diasSemana.map((dia) => {
+                        const asignacionesDelDia = getAsignacionesPorDiaTurnoAnio(dia, turno, anio);
+                        return (
+                          <td key={`${dia}-${turno}-${anio}`} style={{ border: "1px solid #e6e6e8", padding: 14, verticalAlign: "top", background: "#fff" }}>
+                            {asignacionesDelDia.length === 0 ? (
+                              <div style={{ color: "#9aa0a6", fontStyle: "italic", textAlign: "center", padding: 8 }}>—</div>
+                            ) : (
+                              <div className="cell-scroll">
+                                {asignacionesDelDia.map((a) => {
+                                  const materia = getMateria(a.materiaId);
+                                  const docentes = (a.id != null ? getAsignacionesDocentes(a.id) : []).filter(docentePasaFiltrosGlobales);
+
+                                  return (
+                                    <div key={a.id ?? Math.random()} style={{ borderRadius: 12, padding: 12, background: "#fff", border: "1px solid #e7e9ec", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", gap: 8 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                                        <div style={{ flex: 1 }}>
+                                          <div className="card-title">{materia?.nombre ?? "Materia desconocida"}</div>
+                                          <div className="card-sub">{materia?.anio ? `${materia.anio}° año` : "Año ?"}</div>
+                                        </div>
+
+                                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
+                                          {docentes.length < 2 && <button className="action-small" title="Asignar" onClick={noop}>➕</button>}
+                                          <button className="action-small" title="Editar" onClick={noop}>✎</button>
+                                          <button className="action-small" title="Eliminar" onClick={noop}>🗑</button>
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        {docentes.length === 0 ? (
+                                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                            <div className="badge-empty">Sin docente asignado</div>
+                                          </div>
+                                        ) : (
+                                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                            {docentes.map((d) => {
+                                              const docenteReal = docentesLookup.get(d.docenteId);
+                                              const nombreReal = docenteReal?.nombre ?? d.docenteNombre ?? "Docente";
+                                              const categoriaIdReal = docenteReal?.categoriaId ?? d.rolId;
+                                              const categoriaNombre = categoriaIdReal != null ? categoriasMap.get(categoriaIdReal) ?? "" : "";
+                                              const color = getColorPorCarga(d.docenteId, d.rolId);
+
+                                              return (
+                                                <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 10px", borderRadius: 8, background: "#fbfcfd", border: "1px solid #eef0f2" }}>
+                                                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                                                    <div style={{ width: 12, height: 12, background: color, borderRadius: 3, boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.03)" }} />
+                                                    <div>
+                                                      <div style={{ fontWeight: 800 }}>{nombreReal}</div>
+                                                      <div style={{ fontSize: 13, color: "#444" }}>{categoriaNombre || "Categoría"}</div>
+                                                    </div>
+                                                  </div>
+
+                                                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                                    <div style={{ fontSize: 13, color: "#333" }}>{calcularCargaDocente(d.docenteId)} asign.</div>
+                                                    <button className="action-small" title="Editar docente" onClick={noop}>✎</button>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
+
 export default Tablero;

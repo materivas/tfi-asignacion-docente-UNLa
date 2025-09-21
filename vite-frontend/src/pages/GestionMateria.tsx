@@ -109,12 +109,17 @@ function GestionMateria() {
         <ul style={listaEstilo}>
           {materias.map((mat) => (
             <li key={mat.id} style={itemEstilo}>
-              📘 <strong>{mat.nombre}</strong> — {planesMap.get(mat.planId) ?? "Sin plan"}
-              <button onClick={() => setMateriaEditando(mat)} style={btnEditar}>✏️</button>
-              <button onClick={() => mat.id != null && handleEliminar(mat.id)} style={btnEliminar}>🗑️</button>
+              📘 <strong>{mat.nombre}</strong><br />
+              🗂️ Plan: {planesMap.get(mat.planId) ?? "Sin plan"}<br />
+              🗓️ Año en la carrera: {mat.anio ?? "?"}
+              <div style={{ marginTop: "0.5rem" }}>
+                <button onClick={() => setMateriaEditando(mat)} style={btnEditar}>✏️</button>
+                <button onClick={() => mat.id != null && handleEliminar(mat.id)} style={btnEliminar}>🗑️</button>
+              </div>
             </li>
           ))}
         </ul>
+
       )}
 
       {!materiaEditando && (
