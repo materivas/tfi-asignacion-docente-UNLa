@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useCallback } from "react";
 
 interface ModalProps {
   children: React.ReactNode;
@@ -29,13 +29,29 @@ const overlayEstilo: React.CSSProperties = {
   zIndex: 999
 };
 
-const Modal: React.FC<ModalProps> = ({ children, onClose }) => (
-  <>
-    <div style={overlayEstilo} onClick={onClose} />
-    <div style={modalEstilo}>
-      {children}
-    </div>
-  </>
-);
+const Modal: React.FC<ModalProps> = ({ children, onClose }) => {
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [handleKey]);
+
+  return (
+    <>
+      <div style={overlayEstilo} onClick={onClose} aria-hidden="true" />
+      <div
+        style={modalEstilo}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </>
+  );
+};
 
 export default Modal;

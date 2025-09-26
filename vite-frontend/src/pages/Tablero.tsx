@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente } from "../types";
 import { listarAsignaciones } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
-import { listarAsignacionesDocentes } from "../api/asignacionDocenteApi";
+import { listarAsignacionesDocentes, crearAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
 import { listarDocentes } from "../api/docenteApi";
-// Nuevo: endpoint de cuatrimestres (asegurate de tenerlo en tu api)
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
+import { listarRoles } from "../api/rolApi";
+import type { Rol } from "../types";
+import Modal from "src/components/Modal";
 
 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 const turnos = ["Maniana", "Tarde", "Noche"];
@@ -21,6 +23,12 @@ function Tablero() {
   const [cuatrimestresMap, setCuatrimestresMap] = useState<Map<number, number>>(new Map()); // id -> numero_cuatri
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedAsignacionId, setSelectedAsignacionId] = useState<number | null>(null);
+  const [selectedDocenteId, setSelectedDocenteId] = useState<number | "">("");
+  const [selectedCategoriaId, setSelectedCategoriaId] = useState<number | "">("");
+  const [rolesMap, setRolesMap] = useState<Map<number, string>>(new Map());
+  const [selectedRolId, setSelectedRolId] = useState<number | "">("");
 
   // filtros
   const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">(""); // número de cuatrimestre (1 o 2) o ""
@@ -40,13 +48,14 @@ function Tablero() {
     setRefreshing(true);
     try {
       setLoading(true);
-      const [resAsignaciones, resMaterias, resAsignacionesDocentes, resCategorias, resDocentes, resCuatrimestres] = await Promise.all([
+      const [resAsignaciones, resMaterias, resAsignacionesDocentes, resCategorias, resDocentes, resCuatrimestres, resRoles] = await Promise.all([
         listarAsignaciones(),
         listarMaterias(),
         listarAsignacionesDocentes(),
         listarCategorias(),
         listarDocentes(),
-        listarCuatrimestres()
+        listarCuatrimestres(),
+        listarRoles()
       ]);
 
       const asignacionesArray: Asignacion[] = Array.isArray(resAsignaciones) ? resAsignaciones : (resAsignaciones as any)?.data ?? [];
@@ -58,6 +67,13 @@ function Tablero() {
       setAsignaciones(asignacionesArray);
       setMaterias(materiasArray);
       setAsignacionesDocentes(asignacionesDocentesArray);
+
+      const rolesArray: Rol[] = Array.isArray(resRoles) ? resRoles : (resRoles as any)?.data ?? [];
+      const mapRoles = new Map<number, string>();
+      rolesArray.forEach((r) => { if (r?.id != null) mapRoles.set(r.id, r.nombre); });
+      setRolesMap(mapRoles);
+      console.log("rolesMap cargado:", mapRoles);
+
 
       const categoriasArray: Categoria[] = Array.isArray(resCategorias) ? resCategorias : (resCategorias as any)?.data ?? [];
       const mapCat = new Map<number, string>();
@@ -91,7 +107,56 @@ function Tablero() {
   };
 
   useEffect(() => { void fetchData(); }, []);
+  const abrirModal = (asignacionId: number) => {
+    if (asignacionId == null) return;
+    setSelectedAsignacionId(asignacionId);
 
+    const firstDocente = Array.from(docentesLookup.values())[0]?.id;
+    const firstRol = Array.from(rolesMap.keys())[0];
+
+    setSelectedDocenteId(firstDocente ?? "");
+    setSelectedRolId(firstRol ?? "");
+    setShowModal(true);
+  };
+
+  const cerrarModal = () => {
+    setShowModal(false);
+    setSelectedAsignacionId(null);
+    setSelectedDocenteId("");
+    setSelectedRolId("");
+  };
+
+  const confirmarAsignacionDocente = async () => {
+    if (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") {
+      alert("Seleccioná asignación, docente y rol.");
+      return;
+    }
+    if (!rolesMap.has(Number(selectedRolId))) {
+      alert("El rol seleccionado no existe en el backend.");
+      return;
+    }
+
+    const payload = {
+      asignacionId: selectedAsignacionId!,
+      docenteId: Number(selectedDocenteId),
+      docenteNombre: "",
+      rolId: Number(selectedRolId),
+      horasAsignadas: 1, 
+      confirmado: true
+
+    };
+
+    try {
+      console.log("POST crearAsignacionDocente payload:", payload);
+      const res = await crearAsignacionDocente(payload as any);
+      console.log("✅ Respuesta:", res?.data ?? res);
+      await fetchData();
+      cerrarModal();
+    } catch (err: any) {
+      console.error("❌ Error al crear asignación_docente:", err?.response?.status, err?.response?.data ?? err);
+      alert(`Error: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
   const getMateria = (id: number) => materias.find((m) => m.id === id);
   const getAsignacionesDocentes = (asignacionId: number) =>
     asignacionId != null ? asignacionesDocentes.filter((ad) => ad.asignacionId === asignacionId) : [];
@@ -269,7 +334,7 @@ function Tablero() {
     return c;
   }, [filtroCuatrimestre, filtroAnioAsignacion, filtroMateria, filtroDocente, filtroTurno, filtroCategoria]);
 
-  const noop = () => {};
+  const noop = () => { };
 
   return (
     <div style={{ padding: "1.5rem", fontFamily: "Inter, Arial, sans-serif" }}>
@@ -346,7 +411,7 @@ function Tablero() {
           </div>
 
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            {filtrosActivos > 0 && <div style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>{filtrosActivos} activo{filtrosActivos>1?"s":""}</div>}
+            {filtrosActivos > 0 && <div style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>{filtrosActivos} activo{filtrosActivos > 1 ? "s" : ""}</div>}
             <button onClick={resetFiltros} style={{ height: 38, borderRadius: 10, border: "1px solid #e0e0e0", background: "#f8f9fa", color: "#374151", padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Limpiar</button>
 
             <button
@@ -421,7 +486,17 @@ function Tablero() {
                                         </div>
 
                                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
-                                          {docentes.length < 2 && <button className="action-small" title="Asignar" onClick={noop}>➕</button>}
+                                          {docentes.length < 2 && (
+                                            <button
+                                              className="action-small"
+                                              title={a.id ? "Asignar" : "Sin ID"}
+                                              onClick={() => a.id && abrirModal(a.id)}
+                                              disabled={!a.id}
+                                            >
+                                              ➕
+                                            </button>
+                                          )}
+
                                           <button className="action-small" title="Editar" onClick={noop}>✎</button>
                                           <button className="action-small" title="Eliminar" onClick={noop}>🗑</button>
                                         </div>
@@ -464,8 +539,10 @@ function Tablero() {
                                     </div>
                                   );
                                 })}
+
                               </div>
                             )}
+
                           </td>
                         );
                       })}
@@ -476,6 +553,48 @@ function Tablero() {
             </tbody>
           </table>
         </div>
+      )}
+      {showModal && (
+        <Modal onClose={cerrarModal}>
+          <h3 style={{ marginBottom: 12 }}>Asignar docente</h3>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <label style={{ fontSize: 12, fontWeight: 700 }}>Docente</label>
+            <select
+              className="field select"
+              value={selectedDocenteId}
+              onChange={(e) => setSelectedDocenteId(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              {Array.from(docentesLookup.values()).map((d) => (
+                <option key={d.id} value={d.id}>{d.nombre}</option>
+              ))}
+            </select>
+
+            <label style={{ fontSize: 12, fontWeight: 700 }}>Rol</label>
+            <select
+              className="field select"
+              value={selectedRolId}
+              onChange={(e) => setSelectedRolId(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              {rolesMap.size === 0
+                ? <option value="">Cargando roles…</option>
+                : Array.from(rolesMap.entries()).map(([id, nombre]) => (
+                  <option key={id} value={id}>{nombre}</option>
+                ))
+              }
+            </select>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+              <button onClick={cerrarModal}>Cancelar</button>
+              <button
+                onClick={confirmarAsignacionDocente}
+                disabled={selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === ""}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
