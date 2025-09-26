@@ -1,0 +1,142 @@
+package com.gestion.backend.controller;
+import com.gestion.backend.repository.CategoriaRepository;
+import com.gestion.backend.repository.DocenteRepository;
+import com.gestion.backend.dto.DocenteDto;
+import com.gestion.backend.model.Categoria;
+import com.gestion.backend.model.Docente;
+import com.gestion.backend.service.DocenteService;
+
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/docentes")
+public class DocenteController {
+
+	@Autowired
+	private DocenteRepository docenteRepository;
+	
+	@Autowired
+	private CategoriaRepository categoriaRepository;
+	
+	@Autowired
+	private Categoria categoria;
+	
+	@Autowired
+	private DocenteService docenteService;
+	
+
+	@GetMapping
+	public List<DocenteDto> listarTodos() {
+		return docenteService.listarTodos();
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<DocenteDto> obtenerPorId(@PathVariable Long id) {
+		return docenteService.obtenerPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+	}
+
+	@PostMapping
+	public ResponseEntity<?> crear(@RequestBody DocenteDto docenteDto) {
+		try {
+			DocenteDto nuevo = docenteService.crear(docenteDto);
+			return ResponseEntity.ok(nuevo);
+		} catch (RuntimeException e) {
+			System.err.println("❌ Error al crear docente: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace(); // Log completo en consola
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error inesperado al crear docente.");
+		}
+	}
+
+	@PutMapping("/{id}")
+	public ResponseEntity<DocenteDto> actualizar(@PathVariable Long id, @RequestBody DocenteDto docenteDto) {
+		return ResponseEntity.ok(docenteService.actualizar(id, docenteDto));
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+		docenteService.eliminar(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/importar-excel")
+	public ResponseEntity<?> importarDocentesDesdeExcel(@RequestParam("archivo") MultipartFile archivo) {
+	    if (archivo.isEmpty()) {
+	        return ResponseEntity.badRequest().body("Archivo vacío");
+	    }
+
+	    List<String> errores = new ArrayList<>();
+	    int creados = 0;
+	    int ignorados = 0;
+
+	    try (Workbook workbook = new XSSFWorkbook(archivo.getInputStream())) {
+	        Sheet hoja = workbook.getSheetAt(0);
+
+	        for (int i = 1; i <= hoja.getLastRowNum(); i++) {
+	            Row fila = hoja.getRow(i);
+	            if (fila == null) continue;
+
+	            try {
+	                Cell cellNombre = fila.getCell(0);
+	                Cell cellDni = fila.getCell(1);
+	                Cell cellCategoria = fila.getCell(2);
+
+	                String nombre = cellNombre != null ? cellNombre.getStringCellValue().trim() : "";
+	                String dni = cellDni != null ? cellDni.getStringCellValue().trim() : "";
+	                String nombreCategoria = cellCategoria != null ? cellCategoria.getStringCellValue().trim() : "";
+
+	                if (nombre.isEmpty() || dni.isEmpty() || nombreCategoria.isEmpty()) {
+	                    errores.add("Fila " + (i + 1) + ": campos incompletos");
+	                    continue;
+	                }
+
+	                if (docenteRepository.existsByDni(dni)) {
+	                    ignorados++;
+	                    continue;
+	                }
+
+	                Categoria categoria = categoriaRepository.findByNombreIgnoreCase(nombreCategoria)
+	                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada: " + nombreCategoria));
+
+	                Docente nuevo = new Docente();
+	                nuevo.setNombre(nombre);
+	                nuevo.setDni(dni);
+	                nuevo.setCategoria(categoria);
+
+	                docenteRepository.save(nuevo);
+	                creados++;
+
+	            } catch (Exception e) {
+	                errores.add("Fila " + (i + 1) + ": " + e.getMessage());
+	            }
+	        }
+
+	        Map<String, Object> resultado = new HashMap<>();
+	        resultado.put("creados", creados);
+	        resultado.put("ignorados", ignorados);
+	        resultado.put("errores", errores);
+	        return ResponseEntity.ok(resultado);
+
+	    } catch (IOException e) {
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al leer el archivo");
+	    }
+	}
+
+}

@@ -1,2 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<qualifiedTypeNameHistroy/>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="java.util.Map"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.repository.DocenteRepository"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.repository.CategoriaRepository"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.model.Categoria"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.model.Docente"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.service.DocenteService"/>
+    <fullyQualifiedTypeName name="com.gestion.backend.dto.DocenteDto"/>
+</qualifiedTypeNameHistroy>
