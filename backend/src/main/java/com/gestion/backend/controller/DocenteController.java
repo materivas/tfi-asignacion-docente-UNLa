@@ -1,21 +1,39 @@
 package com.gestion.backend.controller;
-
+import com.gestion.backend.repository.CategoriaRepository;
+import com.gestion.backend.repository.DocenteRepository;
 import com.gestion.backend.dto.DocenteDto;
+import com.gestion.backend.model.Categoria;
 import com.gestion.backend.model.Docente;
 import com.gestion.backend.service.DocenteService;
+
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/docentes")
 public class DocenteController {
 
+
+	
+
 	@Autowired
 	private DocenteService docenteService;
+	
 
 	@GetMapping
 	public List<DocenteDto> listarTodos() {
@@ -50,5 +68,20 @@ public class DocenteController {
 	public ResponseEntity<Void> eliminar(@PathVariable Long id) {
 		docenteService.eliminar(id);
 		return ResponseEntity.noContent().build();
+	}
+	
+
+
+	@PostMapping("/importar-excel")
+	public ResponseEntity<?> importarDocentesDesdeExcel(@RequestParam("archivo") MultipartFile archivo) {
+		if (archivo.isEmpty()) {
+			return ResponseEntity.badRequest().body("Archivo vacío");
+		}
+		try {
+			Map<String, Object> resultado = docenteService.importarDocentesDesdeExcel(archivo);
+			return ResponseEntity.ok(resultado);
+		} catch (IOException e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al leer el archivo");
+		}
 	}
 }
