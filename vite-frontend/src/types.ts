@@ -39,13 +39,17 @@ export type Asignacion = {
 };
 
 export interface AsignacionDocente {
-  id: number;
+  id?: number;
   asignacionId: number;
   docenteId: number;
-  docenteNombre: string; // asumimos que el backend lo expone en el DTO
+  docenteNombre: string; 
   rolId: number;
   horasAsignadas: number;
   confirmado: boolean;
 }
 
+export interface  Rol {
+  id: number;
+  nombre: string;
 
+};

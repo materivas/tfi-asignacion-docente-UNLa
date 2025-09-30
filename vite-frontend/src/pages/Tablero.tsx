@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente } from "../types";
 import { listarAsignaciones } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
-import { listarAsignacionesDocentes } from "../api/asignacionDocenteApi";
+import { listarAsignacionesDocentes, crearAsignacionDocente, eliminarAsignacionDocente, actualizarAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
 import { listarDocentes } from "../api/docenteApi";
-// Nuevo: endpoint de cuatrimestres (asegurate de tenerlo en tu api)
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
+import { listarRoles } from "../api/rolApi";
+import type { Rol } from "../types";
+import Modal from "src/components/Modal";
 
 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 const turnos = ["Maniana", "Tarde", "Noche"];
@@ -21,7 +23,19 @@ function Tablero() {
   const [cuatrimestresMap, setCuatrimestresMap] = useState<Map<number, number>>(new Map()); // id -> numero_cuatri
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedAsignacionId, setSelectedAsignacionId] = useState<number | null>(null);
+  const [selectedDocenteId, setSelectedDocenteId] = useState<string>("");
 
+  const [selectedCategoriaId, setSelectedCategoriaId] = useState<number | "">("");
+  const [rolesMap, setRolesMap] = useState<Map<number, string>>(new Map());
+  const [selectedRolId, setSelectedRolId] = useState<number | "">("");
+  const [busquedaDocente, setBusquedaDocente] = useState<string>("");
+  const [editandoAsignacionDocenteId, setEditandoAsignacionDocenteId] = useState<number | null>(null);
+
+  const docentesFiltrados = Array.from(docentesLookup.values()).filter((d) =>
+    d.nombre.toLowerCase().includes(busquedaDocente.toLowerCase())
+  );
   // filtros
   const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">(""); // número de cuatrimestre (1 o 2) o ""
   const [filtroAnioAsignacion, setFiltroAnioAsignacion] = useState<number | "">(2025);
@@ -40,13 +54,14 @@ function Tablero() {
     setRefreshing(true);
     try {
       setLoading(true);
-      const [resAsignaciones, resMaterias, resAsignacionesDocentes, resCategorias, resDocentes, resCuatrimestres] = await Promise.all([
+      const [resAsignaciones, resMaterias, resAsignacionesDocentes, resCategorias, resDocentes, resCuatrimestres, resRoles] = await Promise.all([
         listarAsignaciones(),
         listarMaterias(),
         listarAsignacionesDocentes(),
         listarCategorias(),
         listarDocentes(),
-        listarCuatrimestres()
+        listarCuatrimestres(),
+        listarRoles()
       ]);
 
       const asignacionesArray: Asignacion[] = Array.isArray(resAsignaciones) ? resAsignaciones : (resAsignaciones as any)?.data ?? [];
@@ -58,6 +73,13 @@ function Tablero() {
       setAsignaciones(asignacionesArray);
       setMaterias(materiasArray);
       setAsignacionesDocentes(asignacionesDocentesArray);
+
+      const rolesArray: Rol[] = Array.isArray(resRoles) ? resRoles : (resRoles as any)?.data ?? [];
+      const mapRoles = new Map<number, string>();
+      rolesArray.forEach((r) => { if (r?.id != null) mapRoles.set(r.id, r.nombre); });
+      setRolesMap(mapRoles);
+      console.log("rolesMap cargado:", mapRoles);
+
 
       const categoriasArray: Categoria[] = Array.isArray(resCategorias) ? resCategorias : (resCategorias as any)?.data ?? [];
       const mapCat = new Map<number, string>();
@@ -91,6 +113,79 @@ function Tablero() {
   };
 
   useEffect(() => { void fetchData(); }, []);
+  const abrirModal = (asignacionId: number) => {
+    if (asignacionId == null) return;
+    setSelectedAsignacionId(asignacionId);
+
+    const firstDocente = Array.from(docentesLookup.values())[0]?.id;
+    const firstRol = Array.from(rolesMap.keys())[0];
+
+    setSelectedDocenteId(firstDocente != null ? String(firstDocente) : "");
+    setSelectedRolId(firstRol ?? "");
+    setEditandoAsignacionDocenteId(null);
+    setBusquedaDocente("");
+    setShowModal(true);
+
+  };
+
+  const cerrarModal = () => {
+    setShowModal(false);
+    setSelectedAsignacionId(null);
+    setSelectedDocenteId("");
+    setSelectedRolId("");
+    setEditandoAsignacionDocenteId(null);
+  };
+
+  const confirmarAsignacionDocente = async () => {
+    if (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") {
+      alert("Seleccioná asignación, docente y rol.");
+      return;
+    }
+    if (!rolesMap.has(Number(selectedRolId))) {
+      alert("El rol seleccionado no existe en el backend.");
+      return;
+    }
+
+    const payloadCrear = {
+      asignacionId: selectedAsignacionId!,
+      docenteId: Number(selectedDocenteId),
+      docenteNombre: "",
+      rolId: Number(selectedRolId),
+      horasAsignadas: 1,
+      confirmado: true
+    };
+    // payload para edición (solo campos editables)
+    const payloadEditar = {
+      id: editandoAsignacionDocenteId!,
+      asignacionId: selectedAsignacionId!,
+      docenteId: Number(selectedDocenteId),
+      docenteNombre: "", // o el nombre real si lo tenés
+      rolId: Number(selectedRolId),
+      horasAsignadas: 1, // o el valor real
+      confirmado: true
+
+    };
+
+
+    try {
+
+
+      if (editandoAsignacionDocenteId) {
+        console.log("PUT actualizarAsignacionDocente payload:", payloadEditar);
+        await actualizarAsignacionDocente(editandoAsignacionDocenteId, payloadEditar);
+      } else {
+        console.log("POST crearAsignacionDocente payload:", payloadCrear);
+        await crearAsignacionDocente(payloadCrear as any);
+      }
+      await fetchData();
+      cerrarModal();
+    } catch (err: any) {
+
+      console.error("❌ Error al guardar asignación_docente:", err?.response?.status, err?.response?.data ?? err);
+      alert(`Error al guardar: ${err?.response?.data?.message ?? err?.message}`);
+    }
+
+  };
 
   const getMateria = (id: number) => materias.find((m) => m.id === id);
   const getAsignacionesDocentes = (asignacionId: number) =>
@@ -269,8 +364,33 @@ function Tablero() {
     return c;
   }, [filtroCuatrimestre, filtroAnioAsignacion, filtroMateria, filtroDocente, filtroTurno, filtroCategoria]);
 
-  const noop = () => {};
+  const noop = () => { };
 
+  const borrarAsignacionDocente = async (id: number) => {
+    if (!id) return;
+    if (!window.confirm("¿Seguro que querés eliminar esta asignación de docente?")) return;
+
+    try {
+      await eliminarAsignacionDocente(id);
+      console.log("✅ Asignación docente eliminada:", id);
+      await fetchData(); // refresca el tablero
+    } catch (err: any) {
+      console.error("❌ Error al eliminar asignación_docente:", err?.response?.data ?? err);
+      alert(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
+
+  // Docente seleccionado desde el dropdown del modal
+  const selectedDocenteObj = selectedDocenteId
+    ? docentesLookup.get(Number(selectedDocenteId))
+    : null;
+
+  // Categoría del docente seleccionado (prioriza la categoría real del lookup)
+  const selectedDocenteCategoriaId =
+    selectedDocenteObj?.categoriaId != null ? selectedDocenteObj.categoriaId : null;
+
+  const selectedDocenteCategoriaNombre =
+    selectedDocenteCategoriaId != null ? (categoriasMap.get(selectedDocenteCategoriaId) ?? "") : "";
   return (
     <div style={{ padding: "1.5rem", fontFamily: "Inter, Arial, sans-serif" }}>
       <style>{`
@@ -346,7 +466,7 @@ function Tablero() {
           </div>
 
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            {filtrosActivos > 0 && <div style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>{filtrosActivos} activo{filtrosActivos>1?"s":""}</div>}
+            {filtrosActivos > 0 && <div style={{ height: 28, display: "inline-flex", alignItems: "center", padding: "0 10px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #e2e8f0", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>{filtrosActivos} activo{filtrosActivos > 1 ? "s" : ""}</div>}
             <button onClick={resetFiltros} style={{ height: 38, borderRadius: 10, border: "1px solid #e0e0e0", background: "#f8f9fa", color: "#374151", padding: "0 12px", fontWeight: 700, cursor: "pointer" }}>Limpiar</button>
 
             <button
@@ -421,9 +541,18 @@ function Tablero() {
                                         </div>
 
                                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
-                                          {docentes.length < 2 && <button className="action-small" title="Asignar" onClick={noop}>➕</button>}
-                                          <button className="action-small" title="Editar" onClick={noop}>✎</button>
-                                          <button className="action-small" title="Eliminar" onClick={noop}>🗑</button>
+                                          {docentes.length < 2 && (
+                                            <button
+                                              className="action-small"
+                                              title={a.id ? "Asignar" : "Sin ID"}
+                                              onClick={() => a.id && abrirModal(a.id)}
+                                              disabled={!a.id}
+                                            >
+                                              ➕
+                                            </button>
+                                          )}
+
+
                                         </div>
                                       </div>
 
@@ -437,9 +566,24 @@ function Tablero() {
                                             {docentes.map((d) => {
                                               const docenteReal = docentesLookup.get(d.docenteId);
                                               const nombreReal = docenteReal?.nombre ?? d.docenteNombre ?? "Docente";
-                                              const categoriaIdReal = docenteReal?.categoriaId ?? d.rolId;
-                                              const categoriaNombre = categoriaIdReal != null ? categoriasMap.get(categoriaIdReal) ?? "" : "";
+                                              //  const categoriaIdReal = docenteReal?.categoriaId ?? d.rolId;
+                                              // const categoriaNombre = categoriaIdReal != null ? categoriasMap.get(categoriaIdReal) ?? "" : "";
+                                              const rolNombre = d.rolId != null ? (rolesMap.get(d.rolId) ?? "") : "";
+
                                               const color = getColorPorCarga(d.docenteId, d.rolId);
+
+                                              const docentesOrdenados = docentes
+                                                .slice()
+                                                .sort((d1, d2) => {
+                                                  const rolA = d1.rolId != null ? (rolesMap.get(d1.rolId) ?? "") : "";
+                                                  const rolB = d2.rolId != null ? (rolesMap.get(d2.rolId) ?? "") : "";
+                                                  const byRolDesc = rolB.localeCompare(rolA); // Z → A
+                                                  if (byRolDesc !== 0) return byRolDesc;
+
+                                                  const nombreA = (docentesLookup.get(d1.docenteId)?.nombre ?? d1.docenteNombre ?? "").toLowerCase();
+                                                  const nombreB = (docentesLookup.get(d2.docenteId)?.nombre ?? d2.docenteNombre ?? "").toLowerCase();
+                                                  return nombreA.localeCompare(nombreB);
+                                                });
 
                                               return (
                                                 <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 10px", borderRadius: 8, background: "#fbfcfd", border: "1px solid #eef0f2" }}>
@@ -447,13 +591,34 @@ function Tablero() {
                                                     <div style={{ width: 12, height: 12, background: color, borderRadius: 3, boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.03)" }} />
                                                     <div>
                                                       <div style={{ fontWeight: 800 }}>{nombreReal}</div>
-                                                      <div style={{ fontSize: 13, color: "#444" }}>{categoriaNombre || "Categoría"}</div>
+                                                      <div style={{ fontSize: 13, color: "#444" }}>{rolNombre || "Rol"}</div>
+
                                                     </div>
                                                   </div>
-
                                                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                                     <div style={{ fontSize: 13, color: "#333" }}>{calcularCargaDocente(d.docenteId)} asign.</div>
-                                                    <button className="action-small" title="Editar docente" onClick={noop}>✎</button>
+                                                    <button
+                                                      className="action-small"
+                                                      title="Editar docente"
+                                                      onClick={() => {
+                                                        setSelectedAsignacionId(d.asignacionId);           // asignación actual
+                                                        setSelectedDocenteId(String(d.docenteId));         // docente actual
+                                                        setSelectedRolId(d.rolId ?? "");                   // rol actual
+                                                        setEditandoAsignacionDocenteId(d.id!);             // id asignación_docente
+                                                        setShowModal(true);
+                                                      }}
+                                                    >
+                                                      ✎
+                                                    </button>
+
+
+                                                    <button
+                                                      className="action-small"
+                                                      title="Eliminar asignación docente"
+                                                      onClick={() => borrarAsignacionDocente(d.id!)}
+                                                    >
+                                                      🗑
+                                                    </button>
                                                   </div>
                                                 </div>
                                               );
@@ -464,8 +629,11 @@ function Tablero() {
                                     </div>
                                   );
                                 })}
+
                               </div>
-                            )}
+                            )
+                            }
+
                           </td>
                         );
                       })}
@@ -476,8 +644,102 @@ function Tablero() {
             </tbody>
           </table>
         </div>
-      )}
-    </div>
+      )
+      }
+      {
+        showModal && (
+          <Modal onClose={cerrarModal}>
+
+
+            <h3 style={{ marginBottom: 12 }}>Asignar docente</h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <label style={{ fontSize: 12, fontWeight: 700 }}>Docente</label>
+              <input
+                type="text"
+                className="field"
+                placeholder="Buscar docente..."
+                value={busquedaDocente}
+                onChange={(e) => setBusquedaDocente(e.target.value)}
+                style={{ marginBottom: 6 }}
+              />
+              <select
+                className="field select"
+                value={selectedDocenteId}
+                onChange={(e) => setSelectedDocenteId(e.target.value)}
+              >
+                <option value="">Seleccioná un docente…</option>
+                {docentesFiltrados
+                  .slice()
+                  .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                  .map((d) => {
+                    const categoriaNombre = d.categoriaId
+                      ? categoriasMap.get(d.categoriaId) ?? ""
+                      : "";
+                    return (
+                      <option key={d.id} value={String(d.id)}>
+                        {d.nombre}{categoriaNombre ? ` — ${categoriaNombre}` : ""}
+                      </option>
+                    );
+                  })}
+              </select>
+              {/* Categoría del docente seleccionado */}
+              {selectedDocenteObj && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 6,
+                    fontSize: 13
+                  }}
+                >
+                  <span style={{ color: "#374151", fontWeight: 700 }}>Categoría:</span>
+                  <span
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      border: "1px solid #e2e8f0",
+                      background: "#f8fafc",
+                      color: "#0f172a",
+                      fontWeight: 700
+                    }}
+                  >
+                    {selectedDocenteCategoriaNombre || "Sin categoría"}
+                  </span>
+                </div>
+              )}
+
+
+              <label style={{ fontSize: 12, fontWeight: 700 }}>Rol</label>
+              <select
+                className="field select"
+                value={selectedRolId}
+                onChange={(e) => setSelectedRolId(e.target.value === "" ? "" : Number(e.target.value))}
+              >
+                {rolesMap.size === 0
+                  ? <option value="">Cargando roles…</option>
+                  : Array.from(rolesMap.entries()).map(([id, nombre]) => (
+                    <option key={id} value={id}>{nombre}</option>
+                  ))
+                }
+              </select>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+                <button onClick={cerrarModal}>Cancelar</button>
+                <button
+                  onClick={confirmarAsignacionDocente}
+                  disabled={selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === ""}
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+
+          </Modal>
+        )
+      }
+    </div >
   );
 }
 
