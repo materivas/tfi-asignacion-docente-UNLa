@@ -42,4 +42,17 @@ public class MateriaController {
         materiaService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/importar-excel")
+    public ResponseEntity<?> importarMateriasDesdeExcel(@RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo) {
+        if (archivo.isEmpty()) {
+            return ResponseEntity.badRequest().body("Archivo vacío");
+        }
+        try {
+            var resultado = materiaService.importarMateriasDesdeExcel(archivo);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al importar: " + e.getMessage());
+        }
+    }
 } 

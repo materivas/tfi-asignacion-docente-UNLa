@@ -42,4 +42,17 @@ public class AsignacionDocenteController {
         asignacionDocenteService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
-} 
+
+    @PostMapping("/importar-excel")
+    public ResponseEntity<?> importarAsignacionDocentesDesdeExcel(@RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo) {
+        if (archivo.isEmpty()) {
+            return ResponseEntity.badRequest().body("Archivo vacío");
+        }
+        try {
+            var resultado = asignacionDocenteService.importarAsignacionDocentesDesdeExcel(archivo);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al importar: " + e.getMessage());
+        }
+    }
+}

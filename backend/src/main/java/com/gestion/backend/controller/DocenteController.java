@@ -28,11 +28,7 @@ import java.util.Map;
 @RequestMapping("/api/docentes")
 public class DocenteController {
 
-	@Autowired
-	private DocenteRepository docenteRepository;
-	
-	@Autowired
-	private CategoriaRepository categoriaRepository;
+
 	
 
 	@Autowired
@@ -74,73 +70,18 @@ public class DocenteController {
 		return ResponseEntity.noContent().build();
 	}
 	
-	private String obtenerTexto(Cell cell) {
-	    if (cell == null) return "";
-	    return switch (cell.getCellType()) {
-	        case STRING -> cell.getStringCellValue().trim();
-	        case NUMERIC -> String.valueOf((long) cell.getNumericCellValue()).trim(); 
-	        case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-	        case FORMULA -> cell.getCellFormula(); 
-	        default -> "";
-	    };
-	}
+
 
 	@PostMapping("/importar-excel")
 	public ResponseEntity<?> importarDocentesDesdeExcel(@RequestParam("archivo") MultipartFile archivo) {
-	    if (archivo.isEmpty()) {
-	        return ResponseEntity.badRequest().body("Archivo vacío");
-	    }
-
-	    List<String> errores = new ArrayList<>();
-	    int creados = 0;
-	    int ignorados = 0;
-
-	    try (Workbook workbook = new XSSFWorkbook(archivo.getInputStream())) {
-	        Sheet hoja = workbook.getSheetAt(0);
-
-	        for (int i = 1; i <= hoja.getLastRowNum(); i++) {
-	            Row fila = hoja.getRow(i);
-	            if (fila == null) continue;
-
-	            try {
-	                String nombre = obtenerTexto(fila.getCell(0));
-	                String dni = obtenerTexto(fila.getCell(1));
-	                String nombreCategoria = obtenerTexto(fila.getCell(2));
-
-	                if (nombre.isEmpty() || dni.isEmpty() || nombreCategoria.isEmpty()) {
-	                    errores.add("Fila " + (i + 1) + ": campos incompletos");
-	                    continue;
-	                }
-
-	                if (docenteRepository.existsByDni(dni) ) {
-	                    ignorados++;
-	                    continue;
-	                }
-
-	                Categoria categoria = categoriaRepository.findByNombreIgnoreCase(nombreCategoria)
-	                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada: " + nombreCategoria));
-
-	                Docente nuevo = new Docente();
-	                nuevo.setNombre(nombre);
-	                nuevo.setDni(dni);
-	                nuevo.setCategoria(categoria);
-
-	                docenteRepository.save(nuevo);
-	                creados++;
-
-	            } catch (Exception e) {
-	                errores.add("Fila " + (i + 1) + ": " + e.getMessage());
-	            }
-	        }
-
-	        Map<String, Object> resultado = new HashMap<>();
-	        resultado.put("creados", creados);
-	        resultado.put("ignorados", ignorados);
-	        resultado.put("errores", errores);
-	        return ResponseEntity.ok(resultado);
-
-	    } catch (IOException e) {
-	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al leer el archivo");
-	    }
+		if (archivo.isEmpty()) {
+			return ResponseEntity.badRequest().body("Archivo vacío");
+		}
+		try {
+			Map<String, Object> resultado = docenteService.importarDocentesDesdeExcel(archivo);
+			return ResponseEntity.ok(resultado);
+		} catch (IOException e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al leer el archivo");
+		}
 	}
 }

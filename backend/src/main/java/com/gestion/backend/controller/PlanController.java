@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/planes")
-public class PlanController {
+public class  PlanController {
 
     @Autowired
     private PlanService planService;
@@ -42,4 +42,17 @@ public class PlanController {
         planService.eliminar(id);
         return ResponseEntity.noContent().build();
     }
-} 
+
+    @PostMapping("/importar-excel")
+    public ResponseEntity<?> importarPlanesDesdeExcel(@RequestParam("archivo") org.springframework.web.multipart.MultipartFile archivo) {
+        if (archivo.isEmpty()) {
+            return ResponseEntity.badRequest().body("Archivo vacío");
+        }
+        try {
+            var resultado = planService.importarPlanesDesdeExcel(archivo);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al importar: " + e.getMessage());
+        }
+    }
+}
