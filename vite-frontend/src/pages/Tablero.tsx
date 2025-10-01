@@ -18,7 +18,7 @@ function Tablero() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [asignacionesDocentes, setAsignacionesDocentes] = useState<AsignacionDocente[]>([]);
-  const [categoriasMap, setCategoriasMap] = useState<Map<number, string>>(new Map());
+  const [categoriasMap, setCategoriasMap] = useState<Map<number, Categoria>>(new Map());
   const [docentesLookup, setDocentesLookup] = useState<Map<number, Docente>>(new Map());
   const [cuatrimestresMap, setCuatrimestresMap] = useState<Map<number, number>>(new Map()); // id -> numero_cuatri
   const [loading, setLoading] = useState(true);
@@ -26,13 +26,13 @@ function Tablero() {
   const [showModal, setShowModal] = useState(false);
   const [selectedAsignacionId, setSelectedAsignacionId] = useState<number | null>(null);
   const [selectedDocenteId, setSelectedDocenteId] = useState<string>("");
-
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<number | "">("");
   const [selectedCategoriaId, setSelectedCategoriaId] = useState<number | "">("");
   const [rolesMap, setRolesMap] = useState<Map<number, string>>(new Map());
   const [selectedRolId, setSelectedRolId] = useState<number | "">("");
   const [busquedaDocente, setBusquedaDocente] = useState<string>("");
   const [editandoAsignacionDocenteId, setEditandoAsignacionDocenteId] = useState<number | null>(null);
-
+  const [docenteSeleccionado, setDocenteSeleccionado] = useState<number | "">("");
   const docentesFiltrados = Array.from(docentesLookup.values()).filter((d) =>
     d.nombre.toLowerCase().includes(busquedaDocente.toLowerCase())
   );
@@ -81,9 +81,15 @@ function Tablero() {
       console.log("rolesMap cargado:", mapRoles);
 
 
-      const categoriasArray: Categoria[] = Array.isArray(resCategorias) ? resCategorias : (resCategorias as any)?.data ?? [];
-      const mapCat = new Map<number, string>();
-      categoriasArray.forEach((c) => { if (c?.id != null) mapCat.set(c.id, c.nombre); });
+      // fetchData: después de listarCategorias()
+      const categoriasArray: Categoria[] = Array.isArray(resCategorias)
+        ? resCategorias
+        : (resCategorias as any)?.data ?? [];
+
+      const mapCat = new Map<number, Categoria>();
+      categoriasArray.forEach((c) => {
+        if (c?.id != null) mapCat.set(c.id, c); // guardamos el objeto
+      });
       setCategoriasMap(mapCat);
 
       const resDocentesSafe: unknown = resDocentes;
@@ -191,36 +197,28 @@ function Tablero() {
   const getAsignacionesDocentes = (asignacionId: number) =>
     asignacionId != null ? asignacionesDocentes.filter((ad) => ad.asignacionId === asignacionId) : [];
 
+
   const getColorPorCarga = (docenteId: number, fallbackRolId?: number | null) => {
-    const cantidad = calcularCargaDocente(docenteId);
+    const cantidad = calcularCargaDocente(docenteId); // cuenta anual según filtro
     const docente = docentesLookup.get(docenteId);
     const categoriaId = docente?.categoriaId ?? fallbackRolId;
-    const categoriaNombre = categoriaId != null ? (categoriasMap.get(categoriaId) ?? "").toLowerCase() : "";
+    const categoria = categoriaId != null ? categoriasMap.get(categoriaId) : undefined;
 
-    const esTitular = categoriaNombre.includes("tit");
-    const esAuxiliar = categoriaNombre.includes("aux");
+    if (!categoria) return "#f0ad4e"; // amarillo: categoría desconocida
 
-    if (esTitular) {
-      if (cantidad > 6) return "#d9534f";
-      if (cantidad >= 4) return "#f0ad4e";
-      return "#5cb85c";
-    }
+    const max = Number(categoria.maxMaterias);
 
-    if (esAuxiliar) {
-      if (cantidad >= 3) return "#d9534f";
-      if (cantidad === 2) return "#f0ad4e";
-      return "#5cb85c";
-    }
+    // Verde si cantidad == max o cantidad == max+1
+    if (cantidad === max || cantidad === max + 1) return "#5cb85c"; // verde
 
-    if (cantidad > 6) return "#d9534f";
-    if (cantidad >= 4) return "#f0ad4e";
-    return "#5cb85c";
+    // Amarillo si se pasa de max+1
+    if (cantidad > max + 1) return "#f0ad4e"; // amarillo
+
+    // Rojo en cualquier otro caso (por debajo de max)
+    return "#d9534f"; // rojo                                 // rojo: exceso
   };
-
-  // Helper: obtener numero_cuatri desde asignacion.cuatrimestreId usando cuatrimestresMap
   const extraerNumeroCuatrimestre = (a: Asignacion): number | null => {
-    const maybe = (a as any);
-    // Si la asignacion ya trae objeto cuatrimestre con numero, priorizarlo
+    const maybe = a as any;
     const cand =
       maybe.cuatrimestre?.numero_cuatri ??
       maybe.cuatrimestre?.numeroCuatri ??
@@ -228,19 +226,19 @@ function Tablero() {
       maybe.numero_cuatri ??
       maybe.numeroCuatri ??
       null;
+
     if (cand != null) {
       const n = Number(cand);
       if (!Number.isNaN(n)) return n;
     }
-    // si sólo tenemos cuatrimestreId, buscar en el mapa traído de la API de cuatrimestres
-    const cid = maybe.cuatrimestreId ?? maybe.cuatrimestre_id ?? maybe.cuatrimestreId;
+
+    const cid = maybe.cuatrimestreId ?? maybe.cuatrimestre_id;
     if (cid != null) {
       const mapped = cuatrimestresMap.get(Number(cid));
       if (mapped != null) return mapped;
     }
     return null;
   };
-
   const getAsignacionesPorDiaTurnoAnio = (dia: string, turno: string, anio: number) =>
     asignaciones
       .filter((a) => {
@@ -273,25 +271,21 @@ function Tablero() {
     return true;
   };
 
-  // NUEVO: mapa de apariciones visibles por docente (suma +1 por cada aparición en la galería)
   const docentesCargaMap = useMemo(() => {
     const m = new Map<number, number>();
     const anoFiltro = filtroAnioAsignacion === "" ? null : Number(filtroAnioAsignacion);
 
     asignaciones.forEach((a) => {
-      // filtros de asignación previos a contar
+      // Solo limitamos por año seleccionado
       if (anoFiltro != null && a.anio !== anoFiltro) return;
-      if (filtroCuatrimestre !== "") {
-        const nro = extraerNumeroCuatrimestre(a);
-        if (nro == null || nro !== Number(filtroCuatrimestre)) return;
-      }
-      if (filtroTurno && a.turno !== filtroTurno) return;
+
+      // NOTA: evito filtrar por cuatrimestre para el cálculo anual de color
+      // Podés mantener filtros de turno/materia/docente si querés que el color
+      // refleje la vista actual; si no, eliminá también esos filtros.
 
       const materia = getMateria(a.materiaId);
       if (!materia) return;
-      if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.trim().toLowerCase())) return;
 
-      // docentes confirmados de esa asignación, que además pasen filtros globales
       const docs = (a.id != null ? getAsignacionesDocentes(a.id) : [])
         .filter((ad) => ad.confirmado === true)
         .filter(docentePasaFiltrosGlobales);
@@ -306,12 +300,10 @@ function Tablero() {
     asignaciones,
     asignacionesDocentes,
     filtroAnioAsignacion,
-    filtroCuatrimestre,
-    filtroTurno,
+    // opcional: podés remover estos para que el color sea estrictamente anual
     filtroMateria,
     filtroDocente,
-    filtroCategoria,
-    cuatrimestresMap
+    filtroCategoria
   ]);
 
   // AHORA: calcularCargaDocente lee del mapa de apariciones visibles
@@ -380,17 +372,20 @@ function Tablero() {
     }
   };
 
+
   // Docente seleccionado desde el dropdown del modal
   const selectedDocenteObj = selectedDocenteId
     ? docentesLookup.get(Number(selectedDocenteId))
     : null;
-
-  // Categoría del docente seleccionado (prioriza la categoría real del lookup)
   const selectedDocenteCategoriaId =
     selectedDocenteObj?.categoriaId != null ? selectedDocenteObj.categoriaId : null;
 
   const selectedDocenteCategoriaNombre =
-    selectedDocenteCategoriaId != null ? (categoriasMap.get(selectedDocenteCategoriaId) ?? "") : "";
+    selectedDocenteCategoriaId != null
+      ? (categoriasMap.get(selectedDocenteCategoriaId)?.nombre ?? "")
+      : "";
+
+
   return (
     <div style={{ padding: "1.5rem", fontFamily: "Inter, Arial, sans-serif" }}>
       <style>{`
@@ -448,15 +443,25 @@ function Tablero() {
               ))}
             </datalist>
           </div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 160 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Categoría</div>
-            <select className="field select" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>
+              Categoría
+            </div>
+            <select
+              className="field select"
+              value={filtroCategoria}
+              onChange={(e) =>
+                setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))
+              }
+            >
               <option value="">Todas</option>
-              {Array.from(categoriasMap.entries()).map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+              {Array.from(categoriasMap.entries()).map(([id, categoria]) => (
+                <option key={id} value={id}>
+                  {categoria.nombre}
+                </option>
+              ))}
             </select>
           </div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 140 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#4a4a4a", textTransform: "uppercase" }}>Turno</div>
             <select className="field select" value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value === "" ? "" : e.target.value)}>
@@ -566,12 +571,8 @@ function Tablero() {
                                             {docentes.map((d) => {
                                               const docenteReal = docentesLookup.get(d.docenteId);
                                               const nombreReal = docenteReal?.nombre ?? d.docenteNombre ?? "Docente";
-                                              //  const categoriaIdReal = docenteReal?.categoriaId ?? d.rolId;
-                                              // const categoriaNombre = categoriaIdReal != null ? categoriasMap.get(categoriaIdReal) ?? "" : "";
                                               const rolNombre = d.rolId != null ? (rolesMap.get(d.rolId) ?? "") : "";
-
                                               const color = getColorPorCarga(d.docenteId, d.rolId);
-
                                               const docentesOrdenados = docentes
                                                 .slice()
                                                 .sort((d1, d2) => {
@@ -674,7 +675,7 @@ function Tablero() {
                   .sort((a, b) => a.nombre.localeCompare(b.nombre))
                   .map((d) => {
                     const categoriaNombre = d.categoriaId
-                      ? categoriasMap.get(d.categoriaId) ?? ""
+                      ? categoriasMap.get(d.categoriaId)?.nombre ?? ""
                       : "";
                     return (
                       <option key={d.id} value={String(d.id)}>
