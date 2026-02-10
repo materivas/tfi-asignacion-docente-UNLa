@@ -23,7 +23,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         setCategorias(res.data);
       } catch (err) {
         console.error("Error al cargar categorías:", err);
-        setError("❌ No se pudieron cargar las categorías.");
+        setError("No se pudieron cargar las categorías.");
       }
     };
 

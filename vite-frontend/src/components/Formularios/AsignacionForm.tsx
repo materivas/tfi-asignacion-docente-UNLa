@@ -53,7 +53,7 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
   if (!materias || !cuatrimestres) {
     return (
       <p style={{ color: "red", textAlign: "center", marginTop: "2rem" }}>
-        ❌ Error: No se pudieron cargar las materias o cuatrimestres.
+        Error: No se pudieron cargar las materias o cuatrimestres.
       </p>
     );
   }

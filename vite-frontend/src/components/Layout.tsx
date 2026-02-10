@@ -9,11 +9,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#F2E7DC', // Fondo beige institucional
-        padding: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'var(--color-bg-secondary)',
       }}
     >
-      {children} {/* Renderiza el contenido de cada página */}
+      {children}
     </div>
   );
 };

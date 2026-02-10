@@ -17,7 +17,7 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
   if (!planes || !Array.isArray(planes)) {
     return (
       <p style={{ color: "red", textAlign: "center", marginTop: "2rem" }}>
-        ❌ Error: No se pudieron cargar los planes académicos.
+        Error: No se pudieron cargar los planes académicos.
       </p>
     );
   }
