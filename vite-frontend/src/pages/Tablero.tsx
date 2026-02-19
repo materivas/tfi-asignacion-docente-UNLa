@@ -546,8 +546,8 @@ function Tablero() {
 
   const turnosVisibles = useMemo(() => {
     if (filtroTurno) return [filtroTurno];
-    return turnos.filter(t => diasSemana.some(d => getAsignacionesPorDiaTurnoAnio(d, t, selectedAnio).length > 0));
-  }, [asignaciones, selectedAnio, filtroTurno, filtroCuatrimestre, filtroAnioAsignacion]);
+    return turnos;
+  }, [filtroTurno]);
 
   const errCount = warnings.filter(w => w.type === 'error').length;
   const warnCount = warnings.filter(w => w.type === 'warning').length;
