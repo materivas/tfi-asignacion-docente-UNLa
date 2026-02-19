@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente, Rol } from "../types";
-import { listarAsignaciones } from "../api/asignacionApi";
+import { listarAsignaciones, actualizarAsignacion } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
 import { listarAsignacionesDocentes, crearAsignacionDocente, eliminarAsignacionDocente, actualizarAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
@@ -56,8 +56,8 @@ function Tablero() {
 
   const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">("");
   const [filtroAnioAsignacion, setFiltroAnioAsignacion] = useState<number | "">(2025);
-  const [filtroTurno, setFiltroTurno] = useState<string | "">("");
-
+  const [filtroTurno, setFiltroTurno] = useState<string | "">("");  const [filtroMateria, setFiltroMateria] = useState<string>("");
+  const [filtroDocente, setFiltroDocente] = useState<string>("");
   const [selectedAnio, setSelectedAnio] = useState<number>(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [warningFilter, setWarningFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
@@ -68,6 +68,12 @@ function Tablero() {
     docenteNombre: string;
     rolId: number;
     fromAsignacionId: number;
+  } | null>(null);
+
+  const [draggedAsignacion, setDraggedAsignacion] = useState<{
+    asignacionId: number;
+    fromDia: string;
+    fromTurno: string;
   } | null>(null);
 
   const docentesFiltrados = Array.from(docentesLookup.values()).filter((d) =>
@@ -340,6 +346,87 @@ function Tablero() {
     }
   };
 
+  const handleDragStartAsignacion = (e: React.DragEvent, asignacionId: number, dia: string, turno: string) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("asignacionId", String(asignacionId));
+    setDraggedAsignacion({ asignacionId, fromDia: dia, fromTurno: turno });
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.6';
+      e.currentTarget.style.borderColor = '#7A1F1F';
+      e.currentTarget.style.borderWidth = '2px';
+    }
+  };
+
+  const handleDragEndAsignacion = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+      e.currentTarget.style.borderColor = 'transparent';
+      e.currentTarget.style.borderWidth = '1px';
+    }
+    setDraggedAsignacion(null);
+  };
+
+  const handleDropAsignacion = async (e: React.DragEvent, toDia: string, toTurno: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedAsignacion) {
+      setDraggedAsignacion(null);
+      return;
+    }
+
+    const { asignacionId, fromDia, fromTurno } = draggedAsignacion;
+
+    // Si es la misma celda, no hacer nada
+    if (fromDia === toDia && fromTurno === toTurno) {
+      setDraggedAsignacion(null);
+      return;
+    }
+
+    try {
+      // Obtener la asignación original
+      const asignacion = asignaciones.find(a => a.id === asignacionId);
+      if (!asignacion) {
+        alert("Asignación no encontrada");
+        setDraggedAsignacion(null);
+        return;
+      }
+
+      // Actualizar la asignación con el nuevo día y turno
+      const updatedAsignacion: Asignacion = {
+        ...asignacion,
+        dia: toDia,
+        turno: toTurno
+      };
+
+      await actualizarAsignacion(asignacionId, updatedAsignacion);
+      await fetchData();
+      setDraggedAsignacion(null);
+    } catch (err: any) {
+      console.error("Error al mover materia:", err);
+      alert(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      setDraggedAsignacion(null);
+    }
+  };
+
+  const handleDragOverAsignacion = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.background = '#fef7f7';
+      e.currentTarget.style.borderColor = '#7A1F1F';
+      e.currentTarget.style.borderStyle = 'dashed';
+    }
+  };
+
+  const handleDragLeaveAsignacion = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.background = '#fff';
+      e.currentTarget.style.borderColor = '#f1f5f9';
+      e.currentTarget.style.borderStyle = 'solid';
+    }
+  };
+
   const extraerNumeroCuatrimestre = (a: Asignacion): number | null => {
     const maybe = a as any;
     const cand =
@@ -363,6 +450,15 @@ function Tablero() {
         if (filtroTurno && a.turno !== filtroTurno) return false;
         const materia = getMateria(a.materiaId);
         if (!materia || materia.anio !== anio) return false;
+        if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.toLowerCase())) return false;
+        if (filtroDocente) {
+          const docs = (a.id != null ? getAsignacionesDocentes(a.id) : []).filter((ad) => ad.confirmado === true);
+          const hasDocente = docs.some((ad) => {
+            const docenteReal = docentesLookup.get(ad.docenteId);
+            return docenteReal?.nombre.toLowerCase().includes(filtroDocente.toLowerCase());
+          });
+          if (!hasDocente) return false;
+        }
         return a.dia === dia && a.turno === turno;
       })
       .sort((a, b) => (getMateria(a.materiaId)?.nombre ?? "").localeCompare(getMateria(b.materiaId)?.nombre ?? ""));
@@ -397,7 +493,7 @@ function Tablero() {
     return Array.from(s).sort((x, y) => x - y);
   }, [asignaciones]);
 
-  const resetFiltros = () => { setFiltroCuatrimestre(""); setFiltroAnioAsignacion(2025); setFiltroTurno(""); };
+  const resetFiltros = () => { setFiltroCuatrimestre(""); setFiltroAnioAsignacion(2025); setFiltroTurno(""); setFiltroMateria(""); setFiltroDocente(""); };
 
   /* ──── Stats rápidos ──── */
   const stats = useMemo(() => {
@@ -468,7 +564,7 @@ function Tablero() {
         .cal-cell:hover { background: #fafbfd; }
         .cal-cell.drag-target { background: #fffbeb; border: 2px dashed #f59e0b; }
         .cal-corner { background: linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; }
-        .materia-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; }
+        .materia-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; cursor: move; user-select: none; }
         .materia-card:hover { border-color: var(--color-primary); box-shadow: 0 2px 8px rgba(122,31,31,0.08); }
         .materia-card-name { font-size: 11px; font-weight: 700; color: var(--color-primary); margin-bottom: 5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .docente-chip { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; margin: 3px 0; cursor: grab; display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-size: 11px; }
@@ -665,6 +761,8 @@ function Tablero() {
                 {turnos.map((t) => <option key={t} value={t}>{turnoLabels[t]}</option>)}
               </select>
             </div>
+            <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
+            <input type="text" placeholder="Buscar docente..." value={filtroDocente} onChange={(e) => setFiltroDocente(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
             <button onClick={resetFiltros} style={{ padding: '0 14px', height: 38, background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b' }}>Limpiar</button>
           </div>
         </div>
@@ -702,7 +800,7 @@ function Tablero() {
                   {diasSemana.map((dia) => {
                     const asigs = getAsignacionesPorDiaTurnoAnio(dia, turno, selectedAnio);
                     return (
-                      <div key={`${turno}-${dia}`} className={`cal-cell ${draggedItem ? 'drag-target' : ''}`} onDragOver={handleDragOver} onDrop={(e) => { const first = asigs[0]; if (first?.id) handleDrop(e, first.id); }}>
+                      <div key={`${turno}-${dia}`} className={`cal-cell ${draggedItem ? 'drag-target' : ''}`} onDragOver={(e) => { handleDragOver(e); draggedAsignacion && handleDragOverAsignacion(e); }} onDrop={(e) => { const first = asigs[0]; if (first?.id) handleDrop(e, first.id); draggedAsignacion && handleDropAsignacion(e, dia, turno); }} onDragLeave={draggedAsignacion ? handleDragLeaveAsignacion : undefined}>
                         {asigs.length === 0 ? (
                           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0', fontSize: 20 }}>—</div>
                         ) : (
@@ -717,7 +815,7 @@ function Tablero() {
                               });
 
                             return (
-                              <div key={asignacion.id} className="materia-card" onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, asignacion.id!); }}>
+                              <div key={asignacion.id} className="materia-card" draggable onDragStart={(e) => handleDragStartAsignacion(e, asignacion.id!, dia, turno)} onDragEnd={handleDragEndAsignacion} onDragOver={handleDragOverAsignacion} onDragLeave={handleDragLeaveAsignacion}>
                                 <div className="materia-card-name">{materia.nombre}</div>
                                 {docentes.length === 0 ? (
                                   <button className="add-btn" onClick={() => abrirModal(asignacion.id!)}>+ Asignar docente</button>
