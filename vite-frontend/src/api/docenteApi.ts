@@ -31,3 +31,14 @@ export const actualizarDocente = async (id: number, docente: Docente): Promise<D
   return response.data;
 };
 
+export const importarDocentesExcel = async (archivo: File) => {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  const response = await axios.post<{ creados: number; ignorados: number; errores: string[] }>(
+    `${BASE_URL}/importar-excel`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }
+  );
+  return response.data;
+};
+

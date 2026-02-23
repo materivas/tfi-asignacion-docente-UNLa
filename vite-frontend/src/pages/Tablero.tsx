@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente, Rol } from "../types";
-import { listarAsignaciones, actualizarAsignacion } from "../api/asignacionApi";
+import { listarAsignaciones, actualizarAsignacion, exportarCalendarioExcel } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
 import { listarAsignacionesDocentes, crearAsignacionDocente, eliminarAsignacionDocente, actualizarAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
@@ -61,6 +61,7 @@ function Tablero() {
   const [selectedAnio, setSelectedAnio] = useState<number>(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [warningFilter, setWarningFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
+  const [exporting, setExporting] = useState(false);
 
   const [draggedItem, setDraggedItem] = useState<{
     asignacionDocenteId: number;
@@ -553,6 +554,21 @@ function Tablero() {
   const warnCount = warnings.filter(w => w.type === 'warning').length;
   const okCount = warnings.filter(w => w.type === 'info').length;
 
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      await exportarCalendarioExcel(
+        filtroAnioAsignacion,
+        filtroCuatrimestre
+      );
+    } catch (err) {
+      console.error("Error al exportar Excel:", err);
+      alert("Error al exportar el calendario a Excel");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)', minHeight: '100vh' }}>
       <style>{`
@@ -682,6 +698,10 @@ function Tablero() {
             <button onClick={() => { void fetchData(); }} disabled={refreshing} style={{ padding: '10px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', gap: 6, opacity: refreshing ? 0.6 : 1 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
               {refreshing ? "Actualizando…" : "Actualizar"}
+            </button>
+            <button onClick={handleExportExcel} disabled={exporting} style={{ padding: '10px 18px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: exporting ? 'not-allowed' : 'pointer', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6, opacity: exporting ? 0.6 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+              {exporting ? "Exportando…" : "Exportar Excel"}
             </button>
             <button onClick={() => setShowWarnings(true)} style={{ position: 'relative', padding: '10px 18px', background: (errCount + conflictos.length) > 0 ? '#fef2f2' : '#ecfdf5', border: `1px solid ${(errCount + conflictos.length) > 0 ? '#fecaca' : '#a7f3d0'}`, borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: (errCount + conflictos.length) > 0 ? '#991b1b' : '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>

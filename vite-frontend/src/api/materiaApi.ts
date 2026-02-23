@@ -16,3 +16,14 @@ export const actualizarMateria = (id: number, materia: Materia) =>
 
 export const eliminarMateria = (id: number) =>
   axios.delete(`${BASE_URL}/${id}`, { withCredentials: true });
+
+export const importarMateriasExcel = async (archivo: File) => {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  const response = await axios.post<{ creados: number; ignorados: number; errores: string[] }>(
+    `${BASE_URL}/importar-excel`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }
+  );
+  return response.data;
+};
