@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente, Rol } from "../types";
-import { listarAsignaciones, actualizarAsignacion, exportarCalendarioExcel } from "../api/asignacionApi";
+import { listarAsignaciones, actualizarAsignacion, crearAsignacion, eliminarAsignacion, exportarCalendarioExcel } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
 import { listarAsignacionesDocentes, crearAsignacionDocente, eliminarAsignacionDocente, actualizarAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
@@ -62,6 +62,13 @@ function Tablero() {
   const [showWarnings, setShowWarnings] = useState(false);
   const [warningFilter, setWarningFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
   const [exporting, setExporting] = useState(false);
+
+  // Estado para modal de nueva asignación
+  const [showAddAsignacionModal, setShowAddAsignacionModal] = useState(false);
+  const [addAsignacionDia, setAddAsignacionDia] = useState<string>("");
+  const [addAsignacionTurno, setAddAsignacionTurno] = useState<string>("");
+  const [addAsignacionMateriaId, setAddAsignacionMateriaId] = useState<number | "">("");
+  const [addAsignacionCuatrimestreId, setAddAsignacionCuatrimestreId] = useState<number | "">("");
 
   const [draggedItem, setDraggedItem] = useState<{
     asignacionDocenteId: number;
@@ -496,6 +503,61 @@ function Tablero() {
 
   const resetFiltros = () => { setFiltroCuatrimestre(""); setFiltroAnioAsignacion(2025); setFiltroTurno(""); setFiltroMateria(""); setFiltroDocente(""); };
 
+  /* ──── Crear nueva asignación ──── */
+  const abrirAddAsignacionModal = (dia: string, turno: string) => {
+    setAddAsignacionDia(dia);
+    setAddAsignacionTurno(turno);
+    setAddAsignacionMateriaId("");
+    // Pre-seleccionar cuatrimestre si hay filtro activo
+    const cuatEntries = Array.from(cuatrimestresMap.entries());
+    if (filtroCuatrimestre !== "") {
+      const found = cuatEntries.find(([, num]) => num === Number(filtroCuatrimestre));
+      setAddAsignacionCuatrimestreId(found ? found[0] : "");
+    } else {
+      setAddAsignacionCuatrimestreId(cuatEntries.length > 0 ? cuatEntries[0][0] : "");
+    }
+    setShowAddAsignacionModal(true);
+  };
+
+  const confirmarAddAsignacion = async () => {
+    if (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") {
+      alert("Seleccioná una materia y un cuatrimestre.");
+      return;
+    }
+    try {
+      await crearAsignacion({
+        materiaId: Number(addAsignacionMateriaId),
+        cuatrimestreId: Number(addAsignacionCuatrimestreId),
+        turno: addAsignacionTurno,
+        anio: filtroAnioAsignacion !== "" ? Number(filtroAnioAsignacion) : new Date().getFullYear(),
+        dia: addAsignacionDia,
+      });
+      await fetchData();
+      setShowAddAsignacionModal(false);
+    } catch (err: any) {
+      console.error("Error al crear asignación:", err);
+      alert(`Error al crear: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
+
+  /* ──── Eliminar asignación completa ──── */
+  const borrarAsignacion = async (id: number) => {
+    if (!id) return;
+    if (!window.confirm("¿Seguro que querés eliminar esta asignación completa (materia + docentes asignados)?")) return;
+    try {
+      await eliminarAsignacion(id);
+      await fetchData();
+    } catch (err: any) {
+      console.error("Error al eliminar asignación:", err?.response?.data ?? err);
+      alert(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
+
+  // Materias filtradas por año seleccionado para el modal de agregar
+  const materiasParaAgregar = useMemo(() => {
+    return materias.filter(m => m.anio === selectedAnio).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [materias, selectedAnio]);
+
   /* ──── Stats rápidos ──── */
   const stats = useMemo(() => {
     const docentesConAsig = new Set<number>();
@@ -822,7 +884,16 @@ function Tablero() {
                     return (
                       <div key={`${turno}-${dia}`} className={`cal-cell ${draggedItem ? 'drag-target' : ''}`} onDragOver={(e) => { handleDragOver(e); draggedAsignacion && handleDragOverAsignacion(e); }} onDrop={(e) => { const first = asigs[0]; if (first?.id) handleDrop(e, first.id); draggedAsignacion && handleDropAsignacion(e, dia, turno); }} onDragLeave={draggedAsignacion ? handleDragLeaveAsignacion : undefined}>
                         {asigs.length === 0 ? (
-                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0', fontSize: 20 }}>—</div>
+                          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <button
+                              onClick={() => abrirAddAsignacionModal(dia, turno)}
+                              style={{ width: 36, height: 36, borderRadius: '50%', border: '2px dashed #cbd5e1', background: 'transparent', color: '#94a3b8', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = '#fef7f7'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
+                              title="Agregar asignación"
+                            >+</button>
+                            <span style={{ fontSize: 10, color: '#cbd5e1' }}>Agregar</span>
+                          </div>
                         ) : (
                           asigs.map((asignacion) => {
                             const materia = getMateria(asignacion.materiaId);
@@ -836,7 +907,18 @@ function Tablero() {
 
                             return (
                               <div key={asignacion.id} className="materia-card" draggable onDragStart={(e) => handleDragStartAsignacion(e, asignacion.id!, dia, turno)} onDragEnd={handleDragEndAsignacion} onDragOver={handleDragOverAsignacion} onDragLeave={handleDragLeaveAsignacion}>
-                                <div className="materia-card-name">{materia.nombre}</div>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
+                                  <div className="materia-card-name" style={{ flex: 1 }}>{materia.nombre}</div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); borrarAsignacion(asignacion.id!); }}
+                                    style={{ width: 20, height: 20, padding: 0, background: 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#fff5f5'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'transparent'; }}
+                                    title="Eliminar asignación"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5"/></svg>
+                                  </button>
+                                </div>
                                 {docentes.length === 0 ? (
                                   <button className="add-btn" onClick={() => abrirModal(asignacion.id!)}>+ Asignar docente</button>
                                 ) : (
@@ -866,13 +948,22 @@ function Tablero() {
                                       );
                                     })}
                                     {docentes.length < 2 && (
-                                      <button className="add-btn" onClick={() => abrirModal(asignacion.id!)} style={{ marginTop: 4 }}>+ Agregar</button>
+                                      <button className="add-btn" onClick={() => abrirModal(asignacion.id!)} style={{ marginTop: 4 }}>+ Agregar docente</button>
                                     )}
                                   </>
                                 )}
                               </div>
                             );
                           })
+                        )}
+                        {asigs.length > 0 && (
+                          <button
+                            onClick={() => abrirAddAsignacionModal(dia, turno)}
+                            style={{ width: '100%', padding: 4, background: 'transparent', border: '1.5px dashed #e2e8f0', borderRadius: 6, fontSize: 14, color: '#cbd5e1', cursor: 'pointer', transition: 'all 0.15s', marginTop: 4 }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = '#fef7f7'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'transparent'; }}
+                            title="Agregar otra asignación"
+                          >+</button>
                         )}
                       </div>
                     );
@@ -894,6 +985,57 @@ function Tablero() {
           ))}
         </div>
       </div>
+
+      {/* ──── MODAL AGREGAR ASIGNACIÓN ──── */}
+      {showAddAsignacionModal && (
+        <Modal onClose={() => setShowAddAsignacionModal(false)}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary)', marginTop: 0, marginBottom: 20 }}>
+            Nueva Asignación
+          </h3>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              📅 {addAsignacionDia}
+            </div>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              {turnoIcons[addAsignacionTurno]} {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
+            </div>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              🎓 {selectedAnio}° Año
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Materia</label>
+              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionMateriaId} onChange={(e) => setAddAsignacionMateriaId(e.target.value === "" ? "" : Number(e.target.value))}>
+                <option value="">Seleccioná una materia…</option>
+                {materiasParaAgregar.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
+              {materiasParaAgregar.length === 0 && (
+                <div style={{ marginTop: 6, fontSize: 12, color: '#f59e0b' }}>
+                  ⚠️ No hay materias registradas para {selectedAnio}° Año
+                </div>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Cuatrimestre</label>
+              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionCuatrimestreId} onChange={(e) => setAddAsignacionCuatrimestreId(e.target.value === "" ? "" : Number(e.target.value))}>
+                <option value="">Seleccioná cuatrimestre…</option>
+                {Array.from(cuatrimestresMap.entries()).map(([id, num]) => (
+                  <option key={id} value={id}>Cuatrimestre {num}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
+              <button onClick={() => setShowAddAsignacionModal(false)} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
+              <button onClick={confirmarAddAsignacion} disabled={addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === ""} style={{ flex: 1, padding: '12px', background: 'var(--color-primary)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 'not-allowed' : 'pointer', color: '#fff', opacity: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 0.5 : 1 }}>
+                Crear Asignación
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ──── MODAL ──── */}
       {showModal && (
