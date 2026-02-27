@@ -1,5 +1,6 @@
 package com.gestion.backend.service;
 
+import com.gestion.backend.model.Asignacion;
 import com.gestion.backend.model.Materia;
 import com.gestion.backend.model.Plan;
 import org.apache.poi.ss.usermodel.Cell;
@@ -11,7 +12,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 import com.gestion.backend.dto.MateriaDto;
+import com.gestion.backend.repository.AsignacionRepository;
+import com.gestion.backend.repository.AsignacionDocenteRepository;
 import com.gestion.backend.repository.MateriaRepository;
 import com.gestion.backend.repository.PlanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +33,12 @@ public class MateriaService {
 
     @Autowired
     private PlanRepository planRepository;
+
+    @Autowired
+    private AsignacionRepository asignacionRepository;
+
+    @Autowired
+    private AsignacionDocenteRepository asignacionDocenteRepository;
 
     public List<MateriaDto> listarTodos() {
         return materiaRepository.findAll().stream().map(MateriaDto::fromEntity).toList();
@@ -57,7 +67,17 @@ public class MateriaService {
         }).orElseThrow(() -> new RuntimeException("Materia no encontrada"));
     }
 
+    @Transactional
     public void eliminar(Long id) {
+        // Primero eliminar asignacion_docentes y asignaciones relacionadas a esta materia
+        List<Asignacion> asignaciones = asignacionRepository.findByMateriaId(id);
+        if (!asignaciones.isEmpty()) {
+            List<Long> asignacionIds = asignaciones.stream()
+                    .map(Asignacion::getId)
+                    .collect(Collectors.toList());
+            asignacionDocenteRepository.deleteByAsignacionIdIn(asignacionIds);
+            asignacionRepository.deleteByMateriaId(id);
+        }
         materiaRepository.deleteById(id);
     }
 
