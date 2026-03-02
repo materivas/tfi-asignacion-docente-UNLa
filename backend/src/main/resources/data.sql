@@ -1,5 +1,10 @@
 -- Script de datos iniciales para el sistema de gestión de docentes
 -- Se ejecuta automáticamente al iniciar la aplicación
+-- NOTA: El usuario admin se crea automáticamente mediante DataInitializer.java
+
+-- =====================================
+-- DATOS ACADÉMICOS
+-- =====================================
 -- Limpia datos existentes en orden de dependencia inversa para evitar conflictos
 DELETE FROM asignacion_docente;
 DELETE FROM asignacion;
