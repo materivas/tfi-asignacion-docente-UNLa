@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Materia } from '../types';
+import type { Materia, ImportResultado } from '../types';
 
 const BASE_URL = 'http://localhost:8080/api/materias';
 
@@ -17,10 +17,10 @@ export const actualizarMateria = (id: number, materia: Materia) =>
 export const eliminarMateria = (id: number) =>
   axios.delete(`${BASE_URL}/${id}`, { withCredentials: true });
 
-export const importarMateriasExcel = async (archivo: File) => {
+export const importarMateriasExcel = async (archivo: File): Promise<ImportResultado> => {
   const formData = new FormData();
   formData.append('archivo', archivo);
-  const response = await axios.post<{ creados: number; ignorados: number; errores: string[] }>(
+  const response = await axios.post<ImportResultado>(
     `${BASE_URL}/importar-excel`,
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }

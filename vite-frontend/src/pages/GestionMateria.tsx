@@ -9,6 +9,7 @@ import {
   importarMateriasExcel
 } from "../api/materiaApi";
 import { listarPlanes } from "../api/planApi";
+import { descargarTemplateMateria } from "../utils/excelTemplates";
 import type { Materia, Plan } from "../types";
 
 function GestionMateria() {
@@ -190,6 +191,29 @@ function GestionMateria() {
             >
               + Nueva Materia
             </button>
+            <button
+              onClick={() => descargarTemplateMateria(planesMap)}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#3b82f6',
+                color: 'var(--color-white)',
+                borderRadius: 'var(--border-radius-md)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 'var(--font-size-sm)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                border: 'none',
+                transition: 'all 0.15s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+              title="Descargar template para importar materias"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="12 7 12 19" /><polyline points="7 14 12 19 17 14" /></svg>
+              Descargar Template
+            </button>
             <label
               style={{
                 padding: '0.5rem 1rem',
@@ -240,8 +264,8 @@ function GestionMateria() {
         {/* Resultado de importación */}
         {resultadoImport && (
           <div style={{
-            backgroundColor: resultadoImport.errores.length > 0 ? '#fffbeb' : '#ecfdf5',
-            border: `1px solid ${resultadoImport.errores.length > 0 ? '#fde68a' : '#a7f3d0'}`,
+            backgroundColor: '#ecfdf5',
+            border: '1px solid #a7f3d0',
             borderRadius: 'var(--border-radius-lg)',
             padding: 'var(--spacing-lg)',
             marginBottom: 'var(--spacing-lg)',
@@ -251,22 +275,33 @@ function GestionMateria() {
               onClick={() => setResultadoImport(null)}
               style={{ position: 'absolute', top: 8, right: 12, background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' }}
             >✕</button>
-            <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: resultadoImport.errores.length > 0 ? '#92400e' : '#065f46' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#065f46' }}>
               Resultado de la importación
             </h3>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: resultadoImport.errores.length > 0 ? 12 : 0 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: resultadoImport.filasIgnoradas?.length ? 12 : 0 }}>
               <span style={{ fontWeight: 600, color: '#065f46' }}>✓ Creados: {resultadoImport.creados}</span>
               <span style={{ fontWeight: 600, color: '#92400e' }}>⊘ Ignorados: {resultadoImport.ignorados}</span>
-              {resultadoImport.errores.length > 0 && <span style={{ fontWeight: 600, color: '#991b1b' }}>✕ Errores: {resultadoImport.errores.length}</span>}
             </div>
-            {resultadoImport.errores.length > 0 && (
-              <div style={{ maxHeight: 120, overflowY: 'auto', fontSize: 13, color: '#991b1b', background: '#fef2f2', borderRadius: 8, padding: '8px 12px' }}>
-                {resultadoImport.errores.map((err, i) => <div key={i}>• {err}</div>)}
-              </div>
+            {resultadoImport.filasIgnoradas?.length > 0 && (
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#92400e', userSelect: 'none' }}>
+                  Filas ignoradas ({resultadoImport.filasIgnoradas.length})
+                </summary>
+                <ul style={{ 
+                  marginTop: 8, 
+                  marginBottom: 0,
+                  paddingLeft: 20,
+                  fontSize: 'var(--font-size-sm)',
+                  color: '#666',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  {resultadoImport.filasIgnoradas.map((fila, idx) => (
+                    <li key={idx} style={{ marginBottom: 4 }}>{fila}</li>
+                  ))}
+                </ul>
+              </details>
             )}
-            <div style={{ marginTop: 10, fontSize: 12, color: '#64748b' }}>
-              <strong>Formato esperado del Excel:</strong> Nombre | Plan | Año (una fila por materia, primera fila = encabezados)
-            </div>
           </div>
         )}
 

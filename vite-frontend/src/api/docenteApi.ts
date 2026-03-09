@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Docente } from "../types"; 
+import type { Docente, ImportResultado } from "../types"; 
 
 const BASE_URL = "http://localhost:8080/api/docentes";
 
@@ -31,10 +31,10 @@ export const actualizarDocente = async (id: number, docente: Docente): Promise<D
   return response.data;
 };
 
-export const importarDocentesExcel = async (archivo: File) => {
+export const importarDocentesExcel = async (archivo: File): Promise<ImportResultado> => {
   const formData = new FormData();
   formData.append('archivo', archivo);
-  const response = await axios.post<{ creados: number; ignorados: number; errores: string[] }>(
+  const response = await axios.post<ImportResultado>(
     `${BASE_URL}/importar-excel`,
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }
