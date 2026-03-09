@@ -954,7 +954,7 @@ function Tablero() {
                                         </div>
                                       );
                                     })}
-                                    {docentes.length < 2 && (
+                                    {docentes.length < 3 && (
                                       <button className="add-btn" onClick={() => abrirModal(asignacion.id!)} style={{ marginTop: 4 }}>+ Agregar docente</button>
                                     )}
                                   </>

@@ -46,6 +46,13 @@ function GestionDocente() {
   }, []);
 
   const handleCrear = async (docente: Docente) => {
+    // Validar si ya existe un docente con el mismo DNI
+    const docenteExistente = docentes.find(d => d.dni === docente.dni);
+    if (docenteExistente) {
+      alert(`❌ Error: Ya existe un docente con el DNI ${docente.dni}`);
+      return;
+    }
+
     try {
       const nuevo = await crearDocente(docente);
       setDocentes((prev) => [...prev, nuevo]);
@@ -60,6 +67,13 @@ function GestionDocente() {
   const handleEditar = async (docente: Docente) => {
     if (docente.id == null) {
       alert("❌ No se puede editar un docente sin ID");
+      return;
+    }
+
+    // Validar si ya existe otro docente con el mismo DNI
+    const docenteExistente = docentes.find(d => d.dni === docente.dni && d.id !== docente.id);
+    if (docenteExistente) {
+      alert(`❌ Error: Ya existe otro docente con el DNI ${docente.dni}`);
       return;
     }
 
