@@ -8,8 +8,10 @@ import {
   eliminarCuatrimestre
 } from "../api/cuatrimestreApi";
 import type { Cuatrimestre } from "../types";
+import { useToast } from "../context/ToastContext";
 
 function GestionCuatrimestre() {
+  const { toast, confirm } = useToast();
   const [cuatrimestres, setCuatrimestres] = useState<Cuatrimestre[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,16 +40,16 @@ function GestionCuatrimestre() {
       const res = await crearCuatrimestre(cuatrimestre);
       setCuatrimestres((prev) => [...prev, res.data]);
       setMostrarFormulario(false);
-      alert("Cuatrimestre registrado exitosamente");
+      toast.success("Cuatrimestre registrado exitosamente");
     } catch (err) {
       console.error("Error al crear cuatrimestre:", err);
-      alert("No se pudo registrar el cuatrimestre");
+      toast.error("No se pudo registrar el cuatrimestre");
     }
   };
 
   const handleEditar = async (cuatrimestre: Cuatrimestre) => {
     if (cuatrimestre.id == null) {
-      alert("El cuatrimestre no tiene ID asignado");
+      toast.error("El cuatrimestre no tiene ID asignado");
       return;
     }
 
@@ -57,24 +59,29 @@ function GestionCuatrimestre() {
         prev.map((c) => (c.id === actualizado.data.id ? actualizado.data : c))
       );
       setCuatrimestreEditando(null);
-      alert("Cuatrimestre actualizado exitosamente");
+      toast.success("Cuatrimestre actualizado exitosamente");
     } catch (err) {
       console.error("Error al editar cuatrimestre:", err);
-      alert("No se pudo actualizar el cuatrimestre");
+      toast.error("No se pudo actualizar el cuatrimestre");
     }
   };
 
   const handleEliminar = async (id: number) => {
-    const confirmar = window.confirm("¿Está seguro que desea eliminar este cuatrimestre?");
+    const confirmar = await confirm({
+      title: "Eliminar cuatrimestre",
+      message: "¿Está seguro que desea eliminar este cuatrimestre? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarCuatrimestre(id);
       setCuatrimestres((prev) => prev.filter((c) => c.id !== id));
-      alert("Cuatrimestre eliminado exitosamente");
+      toast.success("Cuatrimestre eliminado exitosamente");
     } catch (err) {
       console.error("Error al eliminar cuatrimestre:", err);
-      alert("No se pudo eliminar el cuatrimestre");
+      toast.error("No se pudo eliminar el cuatrimestre");
     }
   };
 
@@ -89,62 +96,22 @@ function GestionCuatrimestre() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-          }}>
-            Gestión de Cuatrimestres
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Configure períodos académicos por año
-          </p>
+        <div className="page-header">
+          <h1>Gestión de Cuatrimestres</h1>
+          <p>Configure períodos académicos por año</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <select
-              value={filtroNumero}
-              onChange={(e) => setFiltroNumero(e.target.value === "" ? "" : Number(e.target.value))}
-              className="form-select"
-              style={{ minWidth: '200px' }}
-            >
-              <option value="">Todos los cuatrimestres</option>
-              <option value={1}>1° Cuatrimestre</option>
-              <option value={2}>2° Cuatrimestre</option>
-            </select>
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nuevo Cuatrimestre
-            </button>
-          </div>
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <select value={filtroNumero} onChange={(e) => setFiltroNumero(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '200px' }}>
+            <option value="">Todos los cuatrimestres</option>
+            <option value={1}>1° Cuatrimestre</option>
+            <option value={2}>2° Cuatrimestre</option>
+          </select>
+          <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Cuatrimestre
+          </button>
         </div>
 
         {/* Tabla */}
@@ -242,40 +209,23 @@ function GestionCuatrimestre() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Cuatrimestres
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {cuatrimestres.length}
+            <div>
+              <div className="stat-value">{cuatrimestres.length}</div>
+              <div className="stat-label">Total Cuatrimestres</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {cuatrimestresFiltrados.length}
+            <div>
+              <div className="stat-value">{cuatrimestresFiltrados.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
         </div>

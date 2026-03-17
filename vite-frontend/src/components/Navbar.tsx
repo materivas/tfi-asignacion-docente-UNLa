@@ -12,14 +12,16 @@ const Navbar: FC = () => {
   const navLinkStyle = (active: boolean): React.CSSProperties => ({
     color: "var(--color-white)",
     textDecoration: "none",
-    fontWeight: active ? "600" : "500",
-    fontSize: "0.9375rem",
-    padding: "0.625rem 1.25rem",
+    fontWeight: active ? "700" : "500",
+    fontSize: "0.875rem",
+    padding: "0.5rem 1rem",
     borderRadius: "var(--border-radius-md)",
-    backgroundColor: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
+    backgroundColor: active ? "rgba(255, 255, 255, 0.18)" : "transparent",
     transition: "all var(--transition-base)",
-    display: "inline-block",
-    borderBottom: active ? "2px solid var(--color-white)" : "2px solid transparent",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "0.375rem",
+    letterSpacing: "0.01em",
   });
 
   const handleLogout = () => {
@@ -30,8 +32,8 @@ const Navbar: FC = () => {
   return (
     <header
       style={{
-        backgroundColor: "var(--color-primary)",
-        boxShadow: "var(--shadow-md)",
+        background: "linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)",
+        boxShadow: "0 2px 12px rgba(122, 31, 31, 0.2)",
         position: "sticky",
         top: 0,
         zIndex: 1000,
@@ -43,23 +45,25 @@ const Navbar: FC = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "1rem 0",
+            padding: "0.75rem 0",
           }}
         >
           {/* Logo y Título */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <Link to="/" style={{ display: "flex", alignItems: "center", gap: "0.75rem", textDecoration: "none" }}>
             <div
               style={{
-                width: "48px",
-                height: "48px",
+                width: "40px",
+                height: "40px",
                 backgroundColor: "var(--color-white)",
                 borderRadius: "var(--border-radius-md)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontWeight: "bold",
-                fontSize: "1.25rem",
+                fontWeight: 800,
+                fontSize: "0.8rem",
                 color: "var(--color-primary)",
+                letterSpacing: "-0.5px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             >
               UNLa
@@ -68,107 +72,68 @@ const Navbar: FC = () => {
               <h1
                 style={{
                   color: "var(--color-white)",
-                  fontSize: "1.25rem",
-                  fontWeight: "600",
+                  fontSize: "1.0625rem",
+                  fontWeight: 700,
                   margin: 0,
                   lineHeight: "1.2",
+                  letterSpacing: "-0.2px",
                 }}
               >
-                Sistema de Gestión Docente
+                Gestión Docente
               </h1>
               <p
                 style={{
-                  color: "rgba(255, 255, 255, 0.85)",
-                  fontSize: "0.8125rem",
+                  color: "rgba(255, 255, 255, 0.7)",
+                  fontSize: "0.6875rem",
                   margin: 0,
-                  fontWeight: "400",
+                  fontWeight: 400,
+                  letterSpacing: "0.02em",
                 }}
               >
                 Universidad Nacional de Lanús
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* Navegación Principal */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <nav
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <Link 
-                to="/" 
-                style={navLinkStyle(isActive("/"))}
-                onMouseEnter={(e) => {
-                  if (!isActive("/")) {
-                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive("/")) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }
-                }}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <nav style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+              <Link to="/" style={navLinkStyle(isActive("/"))}
+                onMouseEnter={(e) => { if (!isActive("/")) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)"; }}
+                onMouseLeave={(e) => { if (!isActive("/")) e.currentTarget.style.backgroundColor = "transparent"; }}
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 Inicio
               </Link>
-              <Link 
-                to="/tablero" 
-                style={navLinkStyle(isActive("/tablero"))}
-                onMouseEnter={(e) => {
-                  if (!isActive("/tablero")) {
-                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive("/tablero")) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }
-                }}
+              <Link to="/tablero" style={navLinkStyle(isActive("/tablero"))}
+                onMouseEnter={(e) => { if (!isActive("/tablero")) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)"; }}
+                onMouseLeave={(e) => { if (!isActive("/tablero")) e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                Tablero Docente
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Tablero
               </Link>
-              <Link 
-                to="/gestion" 
-                style={navLinkStyle(isActive("/gestion"))}
-                onMouseEnter={(e) => {
-                  if (!isActive("/gestion")) {
-                    e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive("/gestion")) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }
-                }}
+              <Link to="/gestion" style={navLinkStyle(isActive("/gestion"))}
+                onMouseEnter={(e) => { if (!isActive("/gestion")) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)"; }}
+                onMouseLeave={(e) => { if (!isActive("/gestion")) e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                Gestión Académica
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Gestión
               </Link>
             </nav>
 
+            {/* Separador */}
+            <div style={{ width: "1px", height: "28px", backgroundColor: "rgba(255,255,255,0.2)", margin: "0 0.5rem" }} />
+
             {/* Sección de Usuario y Logout */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.75rem",
-              marginLeft: "1rem",
-              paddingLeft: "1rem",
-              borderLeft: "1px solid rgba(255, 255, 255, 0.2)"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                color: "var(--color-white)",
-                fontSize: "0.875rem"
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span style={{ fontWeight: "500" }}>{nombre || 'Usuario'}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", color: "rgba(255,255,255,0.85)", fontSize: "0.8125rem" }}>
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <span style={{ fontWeight: 500, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nombre || 'Usuario'}</span>
               </div>
               
               <button
@@ -176,30 +141,30 @@ const Navbar: FC = () => {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "rgba(255, 255, 255, 0.15)",
+                  gap: "0.375rem",
+                  padding: "0.375rem 0.75rem",
+                  backgroundColor: "rgba(255, 255, 255, 0.12)",
                   color: "var(--color-white)",
-                  border: "none",
+                  border: "1px solid rgba(255,255,255,0.15)",
                   borderRadius: "var(--border-radius-md)",
-                  fontSize: "0.875rem",
-                  fontWeight: "500",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
                   cursor: "pointer",
-                  transition: "all var(--transition-base)"
+                  transition: "all var(--transition-base)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.22)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M16 17L21 12L16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
-                Cerrar Sesión
+                Salir
               </button>
             </div>
           </div>

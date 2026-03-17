@@ -8,6 +8,7 @@ import { listarDocentes } from "../api/docenteApi";
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
 import { listarRoles } from "../api/rolApi";
 import Modal from "src/components/Modal";
+import { useToast } from "../context/ToastContext";
 
 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 const diasCortos: Record<string, string> = {
@@ -15,8 +16,7 @@ const diasCortos: Record<string, string> = {
 };
 const turnos = ["Maniana", "Tarde", "Noche"];
 const turnoLabels: Record<string, string> = { Maniana: "Mañana", Tarde: "Tarde", Noche: "Noche" };
-const turnoIcons: Record<string, string> = { Maniana: "☀️", Tarde: "🌤️", Noche: "🌙" };
-const turnoColors: Record<string, string> = { Maniana: "#fbbf24", Tarde: "#fb923c", Noche: "#6366f1" };
+const turnoColors: Record<string, string> = { Maniana: "#d97706", Tarde: "#ea580c", Noche: "#7c3aed" };
 const anios = [1, 2, 3, 4, 5];
 
 interface Warning {
@@ -38,6 +38,7 @@ interface Conflicto {
 }
 
 function Tablero() {
+  const { toast, confirm } = useToast();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [asignacionesDocentes, setAsignacionesDocentes] = useState<AsignacionDocente[]>([]);
@@ -262,11 +263,11 @@ function Tablero() {
 
   const confirmarAsignacionDocente = async () => {
     if (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") {
-      alert("Seleccioná asignación, docente y rol.");
+      toast.warning("Seleccioná asignación, docente y rol.");
       return;
     }
     if (!rolesMap.has(Number(selectedRolId))) {
-      alert("El rol seleccionado no existe en el backend.");
+      toast.error("El rol seleccionado no existe en el backend.");
       return;
     }
 
@@ -299,7 +300,7 @@ function Tablero() {
       cerrarModal();
     } catch (err: any) {
       console.error("Error al guardar asignación_docente:", err?.response?.status, err?.response?.data ?? err);
-      alert(`Error al guardar: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al guardar: ${err?.response?.data?.message ?? err?.message}`);
     }
   };
 
@@ -351,7 +352,7 @@ function Tablero() {
       setDraggedItem(null);
     } catch (err: any) {
       console.error("Error al mover asignación:", err);
-      alert(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
       setDraggedItem(null);
     }
   };
@@ -397,7 +398,7 @@ function Tablero() {
       // Obtener la asignación original
       const asignacion = asignaciones.find(a => a.id === asignacionId);
       if (!asignacion) {
-        alert("Asignación no encontrada");
+        toast.error("Asignación no encontrada");
         setDraggedAsignacion(null);
         return;
       }
@@ -414,7 +415,7 @@ function Tablero() {
       setDraggedAsignacion(null);
     } catch (err: any) {
       console.error("Error al mover materia:", err);
-      alert(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
       setDraggedAsignacion(null);
     }
   };
@@ -523,7 +524,7 @@ function Tablero() {
 
   const confirmarAddAsignacion = async () => {
     if (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") {
-      alert("Seleccioná una materia y un cuatrimestre.");
+      toast.warning("Seleccioná una materia y un cuatrimestre.");
       return;
     }
     try {
@@ -538,20 +539,26 @@ function Tablero() {
       setShowAddAsignacionModal(false);
     } catch (err: any) {
       console.error("Error al crear asignación:", err);
-      alert(`Error al crear: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al crear: ${err?.response?.data?.message ?? err?.message}`);
     }
   };
 
   /* ──── Eliminar asignación completa ──── */
   const borrarAsignacion = async (id: number) => {
     if (!id) return;
-    if (!window.confirm("¿Seguro que querés eliminar esta asignación completa (materia + docentes asignados)?")) return;
+    const ok = await confirm({
+      title: "Eliminar asignación",
+      message: "¿Seguro que querés eliminar esta asignación completa (materia + docentes asignados)?",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await eliminarAsignacion(id);
       await fetchData();
     } catch (err: any) {
       console.error("Error al eliminar asignación:", err?.response?.data ?? err);
-      alert(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
     }
   };
 
@@ -599,13 +606,19 @@ function Tablero() {
 
   const borrarAsignacionDocente = async (id: number) => {
     if (!id) return;
-    if (!window.confirm("¿Seguro que querés eliminar esta asignación de docente?")) return;
+    const ok = await confirm({
+      title: "Eliminar docente asignado",
+      message: "¿Seguro que querés eliminar esta asignación de docente?",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await eliminarAsignacionDocente(id);
       await fetchData();
     } catch (err: any) {
       console.error("Error al eliminar asignación_docente:", err?.response?.data ?? err);
-      alert(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
     }
   };
 
@@ -620,7 +633,7 @@ function Tablero() {
 
   const handleExportExcel = async () => {
     if (exportCuatrimestre === "") {
-      alert("Seleccioná un cuatrimestre para exportar");
+      toast.warning("Seleccioná un cuatrimestre para exportar");
       return;
     }
     setExporting(true);
@@ -632,7 +645,7 @@ function Tablero() {
       setShowExportModal(false);
     } catch (err) {
       console.error("Error al exportar Excel:", err);
-      alert("Error al exportar el calendario a Excel");
+      toast.error("Error al exportar el calendario a Excel");
     } finally {
       setExporting(false);
     }
@@ -641,45 +654,50 @@ function Tablero() {
   return (
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)', minHeight: '100vh' }}>
       <style>{`
-        .cal-grid { display: grid; grid-template-columns: 100px repeat(6, 1fr); gap: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.07); background: #fff; }
-        .cal-day-header { background: linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%); color: #fff; font-weight: 700; font-size: 13px; text-align: center; padding: 14px 6px; letter-spacing: 0.5px; border-right: 1px solid rgba(255,255,255,0.15); }
+        .cal-grid { display: grid; grid-template-columns: 96px repeat(6, 1fr); gap: 0; border-radius: var(--border-radius-xl); overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04); background: #fff; border: 1px solid #e2e8f0; }
+        .cal-day-header { background: linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%); color: #fff; font-weight: 700; font-size: 13px; text-align: center; padding: 16px 6px; letter-spacing: 0.3px; border-right: 1px solid rgba(255,255,255,0.1); }
         .cal-day-header:last-child { border-right: none; }
-        .cal-turno-label { background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 12px 8px; font-weight: 700; font-size: 12px; color: var(--color-gray-700); border-bottom: 1px solid #e2e8f0; border-right: 2px solid #e2e8f0; min-height: 140px; position: sticky; left: 0; z-index: 5; }
-        .cal-cell { background: #fff; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; padding: 8px; min-height: 140px; transition: all 0.15s ease; overflow-y: auto; }
-        .cal-cell:hover { background: #fafbfd; }
+        .cal-turno-label { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px; font-weight: 700; font-size: 12px; color: var(--color-gray-700); border-bottom: 1px solid #e2e8f0; border-right: 2px solid #e2e8f0; min-height: 140px; position: sticky; left: 0; z-index: 5; }
+        .cal-turno-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .cal-cell { background: #fff; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; padding: 8px; min-height: 140px; transition: background 0.15s ease, border-color 0.15s ease; overflow-y: auto; }
+        .cal-cell:hover { background: var(--color-primary-50); }
         .cal-cell.drag-target { background: #fffbeb; border: 2px dashed #f59e0b; }
         .cal-corner { background: linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; }
-        .materia-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; cursor: move; user-select: none; }
-        .materia-card:hover { border-color: var(--color-primary); box-shadow: 0 2px 8px rgba(122,31,31,0.08); }
+        .materia-card { background: #fff; border: 1px solid #e2e8f0; border-left: 3px solid var(--color-primary); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; cursor: move; user-select: none; }
+        .materia-card:hover { border-left-color: #5a1414; box-shadow: 0 3px 10px rgba(122,31,31,0.08); transform: translateY(-1px); }
         .materia-card-name { font-size: 11px; font-weight: 700; color: var(--color-primary); margin-bottom: 5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .docente-chip { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; margin: 3px 0; cursor: grab; display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-size: 11px; }
-        .docente-chip:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .docente-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; margin: 3px 0; cursor: grab; display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-size: 11px; }
+        .docente-chip:hover { background: #fff; border-color: var(--color-primary-200); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(122,31,31,0.06); }
         .docente-chip:active { cursor: grabbing; opacity: 0.5; }
         .color-indicator { width: 3px; height: 20px; border-radius: 2px; flex-shrink: 0; }
-        .warning-sidebar { position: fixed; top: 0; right: 0; width: 400px; height: 100vh; background: #fff; box-shadow: -8px 0 30px rgba(0,0,0,0.12); z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; }
+        .warning-sidebar { position: fixed; top: 0; right: 0; width: 400px; height: 100vh; background: #fff; box-shadow: -8px 0 30px rgba(0,0,0,0.15); z-index: 1000; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); overflow: hidden; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
         .warning-sidebar.open { transform: translateX(0); }
-        .warning-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .warning-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.35); backdrop-filter: blur(3px); z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
         .warning-overlay.open { opacity: 1; pointer-events: all; }
-        .warning-item { padding: 12px 14px; border-radius: 10px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; border: 1px solid; transition: transform 0.15s; }
-        .warning-item:hover { transform: translateX(-2px); }
+        .warning-item { padding: 12px 14px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; border: 1px solid; transition: all 0.15s ease; }
+        .warning-item:hover { transform: translateX(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .warning-item.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
         .warning-item.warning { background: #fffbeb; border-color: #fde68a; color: #92400e; }
         .warning-item.info { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-        .conflict-item { padding: 12px 14px; border-radius: 10px; margin-bottom: 6px; display: flex; align-items: flex-start; gap: 10px; background: #fdf2f8; border: 1px solid #fbcfe8; color: #9d174d; }
-        .anio-tabs { display: flex; gap: 4px; background: #f1f5f9; border-radius: 12px; padding: 4px; }
+        .conflict-item { padding: 12px 14px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px; background: #fdf2f8; border: 1px solid #fbcfe8; color: #9d174d; transition: all 0.15s ease; }
+        .conflict-item:hover { transform: translateX(-2px); box-shadow: 0 2px 8px rgba(157,23,77,0.08); }
+        .anio-tabs { display: flex; gap: 3px; background: #f1f5f9; border-radius: 12px; padding: 3px; }
         .anio-tab { padding: 10px 20px; border-radius: 10px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--color-gray-500); min-width: 70px; }
         .anio-tab:hover { background: #e2e8f0; color: var(--color-gray-700); }
-        .anio-tab.active { background: var(--color-primary); color: #fff; box-shadow: 0 2px 8px rgba(122,31,31,0.3); }
-        .stat-card { background: #fff; border-radius: 14px; padding: 18px 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; transition: all 0.2s; flex: 1; min-width: 180px; }
-        .stat-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 12px rgba(122,31,31,0.06); }
-        .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .anio-tab.active { background: var(--color-primary); color: #fff; box-shadow: 0 2px 8px rgba(122,31,31,0.25); }
+        .t-stat-card { background: #fff; border-radius: var(--border-radius-lg); padding: 16px 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 14px; transition: all 0.2s; flex: 1; min-width: 170px; }
+        .t-stat-card:hover { border-color: var(--color-primary-200); box-shadow: 0 4px 12px rgba(122,31,31,0.05); }
+        .t-stat-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .filter-pill { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 4px 0 12px; height: 38px; font-size: 13px; transition: all 0.15s; }
         .filter-pill:hover { border-color: var(--color-primary); }
         .filter-pill select { border: none; background: transparent; font-size: 13px; font-weight: 600; color: var(--color-gray-700); padding: 4px 8px 4px 0; cursor: pointer; outline: none; }
         .filter-pill label { font-size: 11px; font-weight: 600; color: var(--color-gray-400); white-space: nowrap; }
+        .filter-search { height: 38px; border-radius: 10px; border: 1.5px solid #e2e8f0; padding: 0 12px; font-size: 13px; background: #fff; box-sizing: border-box; transition: border-color 0.15s; }
+        .filter-search:hover, .filter-search:focus { border-color: var(--color-primary); outline: none; }
         .add-btn { width: 100%; padding: 6px; background: transparent; border: 2px dashed #e2e8f0; border-radius: 8px; font-size: 11px; color: #94a3b8; cursor: pointer; font-weight: 600; transition: all 0.15s; }
-        .add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: #fef7f7; }
+        .add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-50); }
         .warn-badge { min-width: 20px; height: 20px; border-radius: 10px; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #fff; padding: 0 5px; }
+        .cal-legend { margin-top: 20px; display: flex; gap: 20px; align-items: center; justify-content: center; padding: 14px 24px; background: #fff; border-radius: var(--border-radius-lg); border: 1px solid #e2e8f0; flex-wrap: wrap; }
         @media (max-width: 1200px) { .cal-grid { grid-template-columns: 80px repeat(6, 1fr); } .warning-sidebar { width: 340px; } }
         @media (max-width: 768px) { .cal-grid { grid-template-columns: 60px repeat(6, minmax(120px, 1fr)); } .warning-sidebar { width: 100%; } }
       `}</style>
@@ -687,71 +705,154 @@ function Tablero() {
       {/* ──── SIDEBAR DE ALERTAS ──── */}
       <div className={`warning-overlay ${showWarnings ? 'open' : ''}`} onClick={() => setShowWarnings(false)} />
       <aside className={`warning-sidebar ${showWarnings ? 'open' : ''}`}>
-        <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Alertas y Advertencias</h3>
-            <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.8 }}>{warnings.length} alertas · {conflictos.length} conflictos</p>
+        {/* Header del sidebar */}
+        <div style={{ padding: '24px 24px 20px', background: 'linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%)', color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px', lineHeight: 1.2, color: '#ffffff' }}>Alertas y Advertencias</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 400, letterSpacing: '0.01em', color: 'rgba(255,255,255,0.8)' }}>Panel de monitoreo docente</p>
+              </div>
+            </div>
+            <button onClick={() => setShowWarnings(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
           </div>
-          <button onClick={() => setShowWarnings(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: 10, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+          {/* Resumen en mini-stats */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: errCount > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={errCount > 0 ? "#fca5a5" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{warnings.length}</div>
+                <div style={{ fontSize: 10, opacity: 0.65, fontWeight: 500, marginTop: 1 }}>Alertas</div>
+              </div>
+            </div>
+            <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: conflictos.length > 0 ? 'rgba(236,72,153,0.25)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={conflictos.length > 0 ? "#f9a8d4" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{conflictos.length}</div>
+                <div style={{ fontSize: 10, opacity: 0.65, fontWeight: 500, marginTop: 1 }}>Conflictos</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e2e8f0' }}>
+
+        {/* Tabs de filtro */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e2e8f0', background: '#fafbfc' }}>
           {([
             { key: 'all' as const, label: 'Todas', count: warnings.length + conflictos.length },
             { key: 'error' as const, label: 'Exceden', count: errCount },
             { key: 'warning' as const, label: 'Bajas', count: warnCount },
             { key: 'info' as const, label: 'OK', count: okCount }
           ]).map(tab => (
-            <button key={tab.key} onClick={() => setWarningFilter(tab.key)} style={{ flex: 1, padding: '12px 8px', border: 'none', background: warningFilter === tab.key ? '#fff' : '#f8fafc', borderBottom: warningFilter === tab.key ? '3px solid var(--color-primary)' : '3px solid transparent', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: warningFilter === tab.key ? 'var(--color-primary)' : '#94a3b8', transition: 'all 0.15s' }}>
-              {tab.label} ({tab.count})
+            <button key={tab.key} onClick={() => setWarningFilter(tab.key)} style={{ flex: 1, padding: '11px 6px', border: 'none', background: 'transparent', borderBottom: warningFilter === tab.key ? '2.5px solid var(--color-primary)' : '2.5px solid transparent', fontSize: 11, fontWeight: warningFilter === tab.key ? 700 : 600, cursor: 'pointer', color: warningFilter === tab.key ? 'var(--color-primary)' : '#94a3b8', transition: 'all 0.15s', letterSpacing: '0.02em' }}>
+              {tab.label}
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginLeft: 5, minWidth: 18, height: 18, borderRadius: 9, fontSize: 10, fontWeight: 800, background: warningFilter === tab.key ? 'var(--color-primary-100)' : '#f1f5f9', color: warningFilter === tab.key ? 'var(--color-primary)' : '#94a3b8' }}>{tab.count}</span>
             </button>
           ))}
         </div>
+
+        {/* Contenido scrollable */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+          {/* Conflictos */}
           {(warningFilter === 'all' || warningFilter === 'error') && conflictos.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#9d174d', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Superposiciones horarias</div>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#fdf2f8', borderRadius: 8, border: '1px solid #fce7f3' }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#9d174d', textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>Superposiciones horarias</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#ec4899', background: '#fce7f3', borderRadius: 10, padding: '2px 8px' }}>{conflictos.length}</span>
+              </div>
               {conflictos.map((c, idx) => (
                 <div key={idx} className="conflict-item">
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ec4899', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>!</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{c.docenteNombre}</div>
-                    <div style={{ fontSize: 11, opacity: 0.8 }}>{c.dia} {turnoLabels[c.turno] ?? c.turno}: {c.materias.join(' + ')}</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ec4899', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, letterSpacing: '-0.01em' }}>{c.docenteNombre}</div>
+                    <div style={{ fontSize: 11, opacity: 0.75, lineHeight: 1.4, letterSpacing: '0.01em' }}>
+                      <span style={{ fontWeight: 600 }}>{c.dia}</span> · {turnoLabels[c.turno] ?? c.turno} — {c.materias.join(' + ')}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Separador entre secciones */}
+          {(warningFilter === 'all' || warningFilter === 'error') && conflictos.length > 0 && warningsFiltered.length > 0 && (
+            <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, #e2e8f0, transparent)', margin: '16px 0' }} />
+          )}
+
+          {/* Warnings */}
           {warningsFiltered.length > 0 ? (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Carga docente</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ width: 24, height: 24, borderRadius: 6, background: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>Carga docente</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', background: '#e2e8f0', borderRadius: 10, padding: '2px 8px' }}>{warningsFiltered.length}</span>
+              </div>
               {warningsFiltered.map((w) => (
                 <div key={w.id} className={`warning-item ${w.type}`}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14, fontWeight: 800, color: '#fff', background: w.type === 'error' ? '#dc2626' : w.type === 'warning' ? '#f59e0b' : '#10b981' }}>
-                    {w.type === 'error' ? '!' : w.type === 'warning' ? '▼' : '✓'}
+                  <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff', background: w.type === 'error' ? '#dc2626' : w.type === 'warning' ? '#f59e0b' : '#10b981' }}>
+                    {w.type === 'error' ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="2" x2="12" y2="14"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+                    ) : w.type === 'warning' ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="7 13 12 18 17 13"/><line x1="12" y1="6" x2="12" y2="18"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{w.docenteNombre}</div>
-                    <div style={{ fontSize: 11, opacity: 0.8 }}>{w.message}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, letterSpacing: '-0.01em' }}>{w.docenteNombre}</div>
+                    <div style={{ fontSize: 11, opacity: 0.75, lineHeight: 1.4, letterSpacing: '0.01em' }}>{w.message}</div>
                   </div>
-                  <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, background: w.type === 'error' ? '#fecaca' : w.type === 'warning' ? '#fde68a' : '#a7f3d0', color: w.type === 'error' ? '#991b1b' : w.type === 'warning' ? '#92400e' : '#065f46', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums', background: w.type === 'error' ? '#fecaca' : w.type === 'warning' ? '#fde68a' : '#a7f3d0', color: w.type === 'error' ? '#991b1b' : w.type === 'warning' ? '#92400e' : '#065f46', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
                     {w.carga}/{w.maxCarga}
                   </div>
                 </div>
               ))}
             </>
           ) : warningFilter !== 'all' ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>Sin alertas en esta categoría</div>
+            <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 4, letterSpacing: '-0.02em' }}>Sin alertas en esta categoría</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, fontWeight: 400 }}>No se encontraron incidencias con el filtro seleccionado.</div>
             </div>
           ) : null}
+
+          {/* Estado vacío global */}
           {warnings.length === 0 && conflictos.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#10b981' }}>Todo en orden</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>No hay alertas ni conflictos</div>
+            <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '1px solid #a7f3d0' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#10b981', marginBottom: 6, letterSpacing: '-0.02em' }}>Todo en orden</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, maxWidth: 240, margin: '0 auto', fontWeight: 400 }}>Todas las cargas docentes están dentro de los límites establecidos.</div>
             </div>
           )}
+        </div>
+
+        {/* Footer del sidebar */}
+        <div style={{ padding: '12px 20px', borderTop: '1px solid #e2e8f0', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>
+            {errCount > 0 ? `${errCount} requiere${errCount > 1 ? 'n' : ''} atención` : 'Sin incidencias críticas'}
+          </span>
+          <button onClick={() => setShowWarnings(false)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-primary-100)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-primary-50)'; }}>
+            Cerrar panel
+          </button>
         </div>
       </aside>
 
@@ -759,20 +860,25 @@ function Tablero() {
       <div style={{ padding: '24px 28px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>Calendario Docente</h1>
-            <p style={{ color: 'var(--color-gray-500)', margin: '4px 0 0', fontSize: 14 }}>Horario semanal de asignaciones — Arrastrá y soltá para reasignar</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>Calendario Docente</h1>
+              <p style={{ color: 'var(--color-gray-500)', margin: '2px 0 0', fontSize: 13 }}>Horario semanal de asignaciones — Arrastrá y soltá para reasignar</p>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button onClick={() => { void fetchData(); }} disabled={refreshing} style={{ padding: '10px 18px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: refreshing ? 'not-allowed' : 'pointer', color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', gap: 6, opacity: refreshing ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => { void fetchData(); }} disabled={refreshing} className="btn btn-ghost" style={{ opacity: refreshing ? 0.6 : 1 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
               {refreshing ? "Actualizando…" : "Actualizar"}
             </button>
-            <button onClick={() => { setExportCuatrimestre(""); setShowExportModal(true); }} style={{ padding: '10px 18px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+            <button onClick={() => { setExportCuatrimestre(""); setShowExportModal(true); }} className="btn btn-ghost" style={{ color: '#065f46' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
               Exportar Excel
             </button>
-            <button onClick={() => setShowWarnings(true)} style={{ position: 'relative', padding: '10px 18px', background: (errCount + conflictos.length) > 0 ? '#fef2f2' : '#ecfdf5', border: `1px solid ${(errCount + conflictos.length) > 0 ? '#fecaca' : '#a7f3d0'}`, borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: (errCount + conflictos.length) > 0 ? '#991b1b' : '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => setShowWarnings(true)} className="btn" style={{ background: (errCount + conflictos.length) > 0 ? '#fef2f2' : '#ecfdf5', border: `1.5px solid ${(errCount + conflictos.length) > 0 ? '#fecaca' : '#a7f3d0'}`, color: (errCount + conflictos.length) > 0 ? '#991b1b' : '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               Alertas
               {(errCount + conflictos.length) > 0 && (
@@ -783,31 +889,39 @@ function Tablero() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'flex', gap: 14, marginBottom: 20, flexWrap: 'wrap' }}>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>👨‍🏫</div>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div className="t-stat-card">
+            <div className="t-stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.docentesActivos}</div>
               <div style={{ fontSize: 12, color: 'var(--color-gray-500)', fontWeight: 500 }}>Docentes activos</div>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>📚</div>
+          <div className="t-stat-card">
+            <div className="t-stat-icon" style={{ background: '#ecfdf5', color: '#16a34a' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.materiasActivas}</div>
               <div style={{ fontSize: 12, color: 'var(--color-gray-500)', fontWeight: 500 }}>Materias activas</div>
             </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#faf5ff', color: '#9333ea' }}>📋</div>
+          <div className="t-stat-card">
+            <div className="t-stat-icon" style={{ background: '#faf5ff', color: '#9333ea' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.totalAsignaciones}</div>
               <div style={{ fontSize: 12, color: 'var(--color-gray-500)', fontWeight: 500 }}>Total asignaciones</div>
             </div>
           </div>
           {stats.sinDocente > 0 && (
-            <div className="stat-card" style={{ borderColor: '#fecaca' }}>
-              <div className="stat-icon" style={{ background: '#fef2f2', color: '#dc2626' }}>⚠️</div>
+            <div className="t-stat-card" style={{ borderColor: '#fecaca' }}>
+              <div className="t-stat-icon" style={{ background: '#fef2f2', color: '#dc2626' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{stats.sinDocente}</div>
                 <div style={{ fontSize: 12, color: '#991b1b', fontWeight: 500 }}>Sin docente asignado</div>
@@ -850,23 +964,26 @@ function Tablero() {
                 {turnos.map((t) => <option key={t} value={t}>{turnoLabels[t]}</option>)}
               </select>
             </div>
-            <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
-            <input type="text" placeholder="Buscar docente..." value={filtroDocente} onChange={(e) => setFiltroDocente(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
-            <button onClick={resetFiltros} style={{ padding: '0 14px', height: 38, background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b' }}>Limpiar</button>
+            <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} className="filter-search" />
+            <input type="text" placeholder="Buscar docente..." value={filtroDocente} onChange={(e) => setFiltroDocente(e.target.value)} className="filter-search" />
+            <button onClick={resetFiltros} className="btn btn-ghost" style={{ height: 38, fontSize: 12 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Limpiar
+            </button>
           </div>
         </div>
 
         {/* ──── CALENDARIO ──── */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.05)' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
-            <div style={{ fontSize: 16, color: '#64748b', fontWeight: 600 }}>Cargando calendario…</div>
+          <div className="loading-state">
+            <div className="spinner-lg" />
+            <div style={{ fontSize: 16, color: '#64748b', fontWeight: 600, marginTop: 8 }}>Cargando calendario…</div>
           </div>
         ) : turnosVisibles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.05)' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div className="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-gray-300)" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/></svg>
             <div style={{ fontSize: 16, color: '#64748b', fontWeight: 600 }}>No hay asignaciones para {selectedAnio}° Año con los filtros seleccionados</div>
-            <button onClick={resetFiltros} style={{ marginTop: 16, padding: '10px 24px', background: 'var(--color-primary)', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>Limpiar filtros</button>
+            <button onClick={resetFiltros} className="btn btn-primary" style={{ marginTop: 8 }}>Limpiar filtros</button>
           </div>
         ) : (
           <div style={{ overflowX: 'auto', borderRadius: 16 }}>
@@ -882,8 +999,12 @@ function Tablero() {
               {turnosVisibles.map((turno) => (
                 <>
                   <div key={`label-${turno}`} className="cal-turno-label">
-                    <span style={{ fontSize: 22 }}>{turnoIcons[turno]}</span>
-                    <span style={{ color: turnoColors[turno], fontWeight: 800, fontSize: 13 }}>{turnoLabels[turno] ?? turno}</span>
+                    <div className="cal-turno-icon" style={{ background: turnoColors[turno] + '18', color: turnoColors[turno] }}>
+                      {turno === 'Maniana' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>}
+                      {turno === 'Tarde' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/></svg>}
+                      {turno === 'Noche' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>}
+                    </div>
+                    <span style={{ color: turnoColors[turno], fontWeight: 800, fontSize: 12 }}>{turnoLabels[turno] ?? turno}</span>
                   </div>
 
                   {diasSemana.map((dia) => {
@@ -982,7 +1103,7 @@ function Tablero() {
         )}
 
         {/* Leyenda */}
-        <div style={{ marginTop: 20, display: 'flex', gap: 20, alignItems: 'center', justifyContent: 'center', padding: '14px 24px', background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', flexWrap: 'wrap' }}>
+        <div className="cal-legend">
           <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Carga docente:</span>
           {[{ color: '#10b981', label: 'Límite correcto' }, { color: '#f59e0b', label: 'Por debajo del límite' }, { color: '#ef4444', label: 'Excede el límite' }, { color: '#94a3b8', label: 'Sin categoría' }].map(item => (
             <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -995,48 +1116,47 @@ function Tablero() {
 
       {/* ──── MODAL AGREGAR ASIGNACIÓN ──── */}
       {showAddAsignacionModal && (
-        <Modal onClose={() => setShowAddAsignacionModal(false)}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary)', marginTop: 0, marginBottom: 20 }}>
-            Nueva Asignación
-          </h3>
+        <Modal title="Nueva Asignación" onClose={() => setShowAddAsignacionModal(false)}>
+          <div className="modal-form">
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              📅 {addAsignacionDia}
+            <div style={{ padding: '8px 14px', background: 'var(--color-primary-50)', borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {addAsignacionDia}
+            </div>
+            <div style={{ padding: '8px 14px', background: turnoColors[addAsignacionTurno] + '15', borderRadius: 8, fontSize: 13, fontWeight: 700, color: turnoColors[addAsignacionTurno], display: 'flex', alignItems: 'center', gap: 6 }}>
+              {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
             </div>
             <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              {turnoIcons[addAsignacionTurno]} {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
-            </div>
-            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              🎓 {selectedAnio}° Año
+              {selectedAnio}° Año
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Materia</label>
-              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionMateriaId} onChange={(e) => setAddAsignacionMateriaId(e.target.value === "" ? "" : Number(e.target.value))}>
+            <div className="field">
+              <label>Materia</label>
+              <select value={addAsignacionMateriaId} onChange={(e) => setAddAsignacionMateriaId(e.target.value === "" ? "" : Number(e.target.value))}>
                 <option value="">Seleccioná una materia…</option>
                 {materiasParaAgregar.map((m) => (
                   <option key={m.id} value={m.id}>{m.nombre}</option>
                 ))}
               </select>
               {materiasParaAgregar.length === 0 && (
-                <div style={{ marginTop: 6, fontSize: 12, color: '#f59e0b' }}>
-                  ⚠️ No hay materias registradas para {selectedAnio}° Año
+                <div style={{ marginTop: 6, fontSize: 12, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  No hay materias registradas para {selectedAnio}° Año
                 </div>
               )}
             </div>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Cuatrimestre</label>
-              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionCuatrimestreId} onChange={(e) => setAddAsignacionCuatrimestreId(e.target.value === "" ? "" : Number(e.target.value))}>
+            <div className="field">
+              <label>Cuatrimestre</label>
+              <select value={addAsignacionCuatrimestreId} onChange={(e) => setAddAsignacionCuatrimestreId(e.target.value === "" ? "" : Number(e.target.value))}>
                 <option value="">Seleccioná cuatrimestre…</option>
                 {Array.from(cuatrimestresMap.entries()).map(([id, num]) => (
                   <option key={id} value={id}>Cuatrimestre {num}</option>
                 ))}
               </select>
             </div>
-            <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
-              <button onClick={() => setShowAddAsignacionModal(false)} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
-              <button onClick={confirmarAddAsignacion} disabled={addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === ""} style={{ flex: 1, padding: '12px', background: 'var(--color-primary)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 'not-allowed' : 'pointer', color: '#fff', opacity: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 0.5 : 1 }}>
+            <div className="form-actions">
+              <button type="button" className="btn-cancel" onClick={() => setShowAddAsignacionModal(false)}>Cancelar</button>
+              <button type="button" className="btn-submit" onClick={confirmarAddAsignacion} disabled={addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === ""}>
                 Crear Asignación
               </button>
             </div>
@@ -1046,15 +1166,12 @@ function Tablero() {
 
       {/* ──── MODAL ──── */}
       {showModal && (
-        <Modal onClose={cerrarModal}>
-          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary)', marginTop: 0, marginBottom: 20 }}>
-            {editandoAsignacionDocenteId ? "Editar Asignación" : "Asignar Docente"}
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Docente</label>
-              <input type="text" style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, marginBottom: 6, boxSizing: 'border-box' }} placeholder="Buscar docente..." value={busquedaDocente} onChange={(e) => setBusquedaDocente(e.target.value)} />
-              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={selectedDocenteId} onChange={(e) => setSelectedDocenteId(e.target.value)}>
+        <Modal title={editandoAsignacionDocenteId ? "Editar Asignación" : "Asignar Docente"} onClose={cerrarModal}>
+          <div className="modal-form">
+            <div className="field">
+              <label>Docente</label>
+              <input type="text" placeholder="Buscar docente..." value={busquedaDocente} onChange={(e) => setBusquedaDocente(e.target.value)} style={{ marginBottom: 6 }} />
+              <select value={selectedDocenteId} onChange={(e) => setSelectedDocenteId(e.target.value)}>
                 <option value="">Seleccioná un docente…</option>
                 {docentesFiltrados.slice().sort((a, b) => a.nombre.localeCompare(b.nombre)).map((d) => {
                   const categoriaNombre = d.categoriaId ? categoriasMap.get(d.categoriaId)?.nombre ?? "" : "";
@@ -1071,8 +1188,8 @@ function Tablero() {
                 const selMax = selCat ? selCat.maxMaterias : 0;
                 const selColor = getColorPorCarga(selDoc.id!);
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                    <div style={{ width: 6, height: 32, borderRadius: 3, background: selColor }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10, padding: '12px 14px', background: 'var(--color-primary-50)', borderRadius: 10, border: '1px solid var(--color-primary-100)' }}>
+                    <div style={{ width: 5, height: 32, borderRadius: 3, background: selColor }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{selCat?.nombre ?? 'Sin categoría'}</div>
                       <div style={{ fontSize: 12, color: '#64748b' }}>Carga: {selCarga} / {selMax} materias</div>
@@ -1084,15 +1201,15 @@ function Tablero() {
                 );
               })()}
             </div>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Rol</label>
-              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={selectedRolId} onChange={(e) => setSelectedRolId(e.target.value === "" ? "" : Number(e.target.value))}>
+            <div className="field">
+              <label>Rol</label>
+              <select value={selectedRolId} onChange={(e) => setSelectedRolId(e.target.value === "" ? "" : Number(e.target.value))}>
                 {rolesMap.size === 0 ? <option value="">Cargando roles…</option> : Array.from(rolesMap.entries()).map(([id, nombre]) => (<option key={id} value={id}>{nombre}</option>))}
               </select>
             </div>
-            <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
-              <button onClick={cerrarModal} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
-              <button onClick={confirmarAsignacionDocente} disabled={selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === ""} style={{ flex: 1, padding: '12px', background: 'var(--color-primary)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") ? 'not-allowed' : 'pointer', color: '#fff', opacity: (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") ? 0.5 : 1 }}>
+            <div className="form-actions">
+              <button type="button" className="btn-cancel" onClick={cerrarModal}>Cancelar</button>
+              <button type="button" className="btn-submit" onClick={confirmarAsignacionDocente} disabled={selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === ""}>
                 {editandoAsignacionDocenteId ? "Actualizar" : "Asignar"}
               </button>
             </div>
@@ -1102,22 +1219,20 @@ function Tablero() {
 
       {/* Modal de exportar Excel */}
       {showExportModal && (
-        <Modal onClose={() => setShowExportModal(false)}>
-          <div style={{ padding: 28, minWidth: 360 }}>
-            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 800, color: 'var(--color-primary)' }}>Exportar a Excel</h2>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b' }}>Seleccioná el cuatrimestre que querés exportar</p>
+        <Modal title="Exportar a Excel" onClose={() => setShowExportModal(false)}>
+          <div className="modal-form">
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>Seleccioná el cuatrimestre que querés exportar</p>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Año</label>
-              <div style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#1e293b' }}>
+            <div className="field">
+              <label>Año</label>
+              <div style={{ padding: '10px 14px', background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)', borderRadius: 8, fontSize: 14, color: '#1e293b', fontWeight: 600 }}>
                 {filtroAnioAsignacion === "" ? "Todos los años" : filtroAnioAsignacion}
               </div>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Cuatrimestre *</label>
+            <div className="field">
+              <label>Cuatrimestre *</label>
               <select
-                style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }}
                 value={exportCuatrimestre}
                 onChange={(e) => setExportCuatrimestre(e.target.value === "" ? "" : Number(e.target.value))}
               >
@@ -1128,14 +1243,16 @@ function Tablero() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
-              <button onClick={() => setShowExportModal(false)} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
+            <div className="form-actions">
+              <button type="button" className="btn-cancel" onClick={() => setShowExportModal(false)}>Cancelar</button>
               <button
+                type="button"
+                className="btn-submit"
                 onClick={handleExportExcel}
                 disabled={exportCuatrimestre === "" || exporting}
-                style={{ flex: 1, padding: '12px', background: '#065f46', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (exportCuatrimestre === "" || exporting) ? 'not-allowed' : 'pointer', color: '#fff', opacity: (exportCuatrimestre === "" || exporting) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 {exporting ? "Exportando…" : "Exportar"}
               </button>
             </div>

@@ -54,88 +54,62 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
-      <h3 style={{ textAlign: "center" }}>
-        {docenteInicial ? "Editar Docente" : "Alta de Docente"}
-      </h3>
+    <form onSubmit={handleSubmit} className="modal-form">
+      <div className="field">
+        <label>Nombre completo</label>
+        <input
+          type="text"
+          value={nombre}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
+          required
+          placeholder="Ej: Juan Pérez"
+        />
+      </div>
 
-      <label>Nombre:</label>
-      <input
-        type="text"
-        value={nombre}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
-        required
-        style={inputEstilo}
-      />
+      <div className="field">
+        <label>DNI</label>
+        <input
+          type="text"
+          value={dni}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setDni(e.target.value)}
+          required
+          placeholder="Ej: 30123456"
+        />
+      </div>
 
-      <label>DNI:</label>
-      <input
-        type="text"
-        value={dni}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setDni(e.target.value)}
-        required
-        style={inputEstilo}
-      />
-
-      <label>Categoría:</label>
-      <select
-        value={categoriaId}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-          const value = e.target.value;
-          setCategoriaId(value === "" ? "" : Number(value));
-        }}
-        required
-        style={inputEstilo}
-      >
-        <option value="">Seleccione</option>
-        {categorias.map((cat) => (
-          <option key={cat.id} value={cat.id}>
-            {cat.nombre}
-          </option>
-        ))}
-      </select>
-
-      {error && <p style={{ color: "red", textAlign: "center", marginTop: "1rem" }}>{error}</p>}
-
-      <button type="submit" style={btnEstilo}>
-        {docenteInicial ? "Guardar cambios" : "Registrar"}
-      </button>
-
-      {docenteInicial && onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{
-            ...btnEstilo,
-            backgroundColor: "#999",
-            marginTop: "0.5rem"
+      <div className="field">
+        <label>Categoría</label>
+        <select
+          value={categoriaId}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+            const value = e.target.value;
+            setCategoriaId(value === "" ? "" : Number(value));
           }}
+          required
         >
-          Cancelar edición
+          <option value="">Seleccioná una categoría…</option>
+          {categorias.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {error && <div className="alert alert-error">{error}</div>}
+
+      <div className="form-actions">
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="btn-cancel">
+            Cancelar
+          </button>
+        )}
+        <button type="submit" className="btn-submit">
+          {docenteInicial ? "Guardar cambios" : "Registrar"}
         </button>
-      )}
+      </div>
     </form>
   );
-};
-
-const inputEstilo: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.5rem",
-  marginBottom: "1rem",
-  borderRadius: "4px",
-  border: "1px solid #ccc"
-};
-
-const btnEstilo: React.CSSProperties = {
-  backgroundColor: "#7A1F1F",
-  color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  border: "none",
-  cursor: "pointer",
-  width: "100%"
 };
 
 export default DocenteForm;

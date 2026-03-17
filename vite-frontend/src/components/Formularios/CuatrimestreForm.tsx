@@ -49,79 +49,35 @@ const CuatrimestreForm: React.FC<Props> = ({ cuatrimestreInicial, onSubmit, onCa
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
-      <h3 style={{ textAlign: "center" }}>
-        {cuatrimestreInicial ? "Editar Cuatrimestre" : "Alta de Cuatrimestre"}
-      </h3>
-
-      <label>Número de cuatrimestre:</label>
-      <select
-        value={numeroCuatri === "" ? "" : String(numeroCuatri)}
-        onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-          const val = e.target.value === "" ? "" : Number(e.target.value);
-          setNumeroCuatri(val);
-        }}
-        required
-        style={inputEstilo}
-      >
-        <option value="">Seleccione</option>
-        <option value="1">1°</option>
-        <option value="2">2°</option>
-      </select>
-
-      {/* Si agregás año, copiá el estilo del MateriaForm */}
-      {/*
-      <label>Año lectivo:</label>
-      <input
-        type="number"
-        value={anio}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          const v = e.target.value;
-          setAnio(v === "" ? "" : Number(v));
-        }}
-        required
-        min={2020}
-        max={2035}
-        placeholder="Ej: 2025"
-        style={inputEstilo}
-      />
-      */}
-
-      <button type="submit" style={btnEstilo}>
-        {cuatrimestreInicial ? "Guardar cambios" : "Registrar"}
-      </button>
-
-      {cuatrimestreInicial && onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{ ...btnEstilo, backgroundColor: "#999", marginTop: "0.5rem" }}
+    <form onSubmit={handleSubmit} className="modal-form">
+      <div className="field">
+        <label>Número de cuatrimestre</label>
+        <select
+          value={numeroCuatri === "" ? "" : String(numeroCuatri)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+            const val = e.target.value === "" ? "" : Number(e.target.value);
+            setNumeroCuatri(val);
+          }}
+          required
         >
-          Cancelar edición
+          <option value="">Seleccioná cuatrimestre…</option>
+          <option value="1">1°</option>
+          <option value="2">2°</option>
+        </select>
+      </div>
+
+      <div className="form-actions">
+        {cuatrimestreInicial && onCancel && (
+          <button type="button" onClick={onCancel} className="btn-cancel">
+            Cancelar
+          </button>
+        )}
+        <button type="submit" className="btn-submit">
+          {cuatrimestreInicial ? "Guardar cambios" : "Registrar"}
         </button>
-      )}
+      </div>
     </form>
   );
-};
-
-const inputEstilo: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.5rem",
-  marginBottom: "1rem",
-  borderRadius: "4px",
-  border: "1px solid #ccc"
-};
-
-const btnEstilo: React.CSSProperties = {
-  backgroundColor: "#7A1F1F",
-  color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  border: "none",
-  cursor: "pointer",
-  width: "100%"
 };
 
 export default CuatrimestreForm;

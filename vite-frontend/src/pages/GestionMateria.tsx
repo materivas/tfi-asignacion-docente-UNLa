@@ -11,8 +11,10 @@ import {
 import { listarPlanes } from "../api/planApi";
 import { descargarTemplateMateria } from "../utils/excelTemplates";
 import type { Materia, Plan } from "../types";
+import { useToast } from "../context/ToastContext";
 
 function GestionMateria() {
+  const { toast, confirm } = useToast();
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [planesMap, setPlanesMap] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ function GestionMateria() {
 
   const handleEditar = async (materia: Materia) => {
     if (materia.id == null) {
-      alert("❌ La materia no tiene ID asignado");
+      toast.error("La materia no tiene ID asignado");
       return;
     }
 
@@ -63,24 +65,29 @@ function GestionMateria() {
         prev.map((m) => (m.id === actualizada.data.id ? actualizada.data : m))
       );
       setMateriaEditando(null);
-      alert("✅ Materia actualizada exitosamente");
+      toast.success("Materia actualizada exitosamente");
     } catch (err) {
       console.error("❌ Error al editar materia:", err);
-      alert("❌ No se pudo actualizar la materia");
+      toast.error("No se pudo actualizar la materia");
     }
   };
 
   const handleEliminar = async (id: number) => {
-    const confirmar = window.confirm("¿Está seguro que desea eliminar esta materia?");
+    const confirmar = await confirm({
+      title: "Eliminar materia",
+      message: "¿Está seguro que desea eliminar esta materia? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarMateria(id);
       setMaterias((prev) => prev.filter((m) => m.id !== id));
-      alert("✅ Materia eliminada exitosamente");
+      toast.success("Materia eliminada exitosamente");
     } catch (err) {
       console.error("❌ Error al eliminar materia:", err);
-      alert("❌ No se pudo eliminar la materia");
+      toast.error("No se pudo eliminar la materia");
     }
   };
 
@@ -89,10 +96,10 @@ function GestionMateria() {
       const res = await crearMateria(materia);
       setMaterias((prev) => [...prev, res.data]);
       setMostrarFormulario(false);
-      alert("✅ Materia registrada exitosamente");
+      toast.success("Materia registrada exitosamente");
     } catch (err) {
       console.error("❌ Error al crear materia:", err);
-      alert("❌ No se pudo registrar la materia");
+      toast.error("No se pudo registrar la materia");
     }
   };
 
@@ -111,152 +118,54 @@ function GestionMateria() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-md)',
-          }}>
-            Gestión de Materias
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Administre materias organizadas por plan de estudio y año académico
-          </p>
+        <div className="page-header">
+          <h1>Gestión de Materias</h1>
+          <p>Administre materias organizadas por plan de estudio y año académico</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Buscar materia..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="form-input"
-                style={{ minWidth: '200px', flex: 1 }}
-              />
-              <select
-                value={filtroPlan}
-                onChange={(e) => setFiltroPlan(e.target.value === "" ? "" : Number(e.target.value))}
-                className="form-select"
-                style={{ minWidth: '180px' }}
-              >
-                <option value="">Todos los planes</option>
-                {Array.from(planesMap.entries()).map(([id, nombre]) => (
-                  <option key={id} value={id}>{nombre}</option>
-                ))}
-              </select>
-              <select
-                value={filtroAnio}
-                onChange={(e) => setFiltroAnio(e.target.value === "" ? "" : Number(e.target.value))}
-                className="form-select"
-                style={{ minWidth: '150px' }}
-              >
-                <option value="">Todos los años</option>
-                {aniosDisponibles.map((anio) => (
-                  <option key={anio} value={anio}>{anio}° Año</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nueva Materia
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
+            <input type="text" placeholder="Buscar materia..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '200px', flex: 1 }} />
+            <select value={filtroPlan} onChange={(e) => setFiltroPlan(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '180px' }}>
+              <option value="">Todos los planes</option>
+              {Array.from(planesMap.entries()).map(([id, nombre]) => (<option key={id} value={id}>{nombre}</option>))}
+            </select>
+            <select value={filtroAnio} onChange={(e) => setFiltroAnio(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '150px' }}>
+              <option value="">Todos los años</option>
+              {aniosDisponibles.map((anio) => (<option key={anio} value={anio}>{anio}° Año</option>))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+            <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nueva Materia
             </button>
-            <button
-              onClick={() => descargarTemplateMateria(planesMap)}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#3b82f6',
-                color: 'var(--color-white)',
-                borderRadius: 'var(--border-radius-md)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 'var(--font-size-sm)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                border: 'none',
-                transition: 'all 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-              title="Descargar template para importar materias"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="12 7 12 19" /><polyline points="7 14 12 19 17 14" /></svg>
-              Descargar Template
+            <button onClick={() => descargarTemplateMateria(planesMap)} className="btn btn-ghost" title="Descargar template para importar materias">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="12 7 12 19"/><polyline points="7 14 12 19 17 14"/></svg>
+              Template
             </button>
-            <label
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: importando ? 'var(--color-gray-400)' : '#065f46',
-                color: 'var(--color-white)',
-                borderRadius: 'var(--border-radius-md)',
-                cursor: importando ? 'not-allowed' : 'pointer',
-                fontWeight: 600,
-                fontSize: 'var(--font-size-sm)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                opacity: importando ? 0.6 : 1,
-                transition: 'all 0.15s'
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-              {importando ? 'Importando…' : 'Importar Excel'}
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                style={{ display: 'none' }}
-                disabled={importando}
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setImportando(true);
-                  setResultadoImport(null);
-                  try {
-                    const res = await importarMateriasExcel(file);
-                    setResultadoImport(res);
-                    // Recargar materias
-                    const resMaterias = await listarMaterias();
-                    setMaterias(resMaterias.data);
-                  } catch (err) {
-                    console.error('Error al importar materias:', err);
-                    alert('Error al importar el archivo Excel');
-                  } finally {
-                    setImportando(false);
-                    e.target.value = '';
-                  }
-                }}
-              />
+            <label className="btn btn-ghost" style={{ cursor: importando ? 'not-allowed' : 'pointer', opacity: importando ? 0.6 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              {importando ? 'Importando…' : 'Importar'}
+              <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importando} onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImportando(true);
+                setResultadoImport(null);
+                try {
+                  const res = await importarMateriasExcel(file);
+                  setResultadoImport(res);
+                  const resMaterias = await listarMaterias();
+                  setMaterias(resMaterias.data);
+                } catch (err) {
+                  console.error('Error al importar materias:', err);
+                  toast.error('Error al importar el archivo Excel');
+                } finally {
+                  setImportando(false);
+                  e.target.value = '';
+                }
+              }} />
             </label>
           </div>
         </div>
@@ -404,55 +313,32 @@ function GestionMateria() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Materias
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {materias.length}
+            <div>
+              <div className="stat-value">{materias.length}</div>
+              <div className="stat-label">Total Materias</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {materiasFiltradas.length}
+            <div>
+              <div className="stat-value">{materiasFiltradas.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Planes Activos
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#ecfdf5', color: 'var(--color-success)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-success)' }}>
-              {planesMap.size}
+            <div>
+              <div className="stat-value">{planesMap.size}</div>
+              <div className="stat-label">Planes Activos</div>
             </div>
           </div>
         </div>

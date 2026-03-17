@@ -8,8 +8,10 @@ import {
   eliminarPlan,
   listarPlanes
 } from "../api/planApi";
+import { useToast } from "../context/ToastContext";
 
 function GestionPlan() {
+  const { toast, confirm } = useToast();
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,44 +40,49 @@ function GestionPlan() {
       const res = await crearPlan({ nombre: plan.nombre, descripcion: plan.descripcion });
       setPlanes((prev) => [...prev, res.data]);
       setMostrarFormulario(false);
-      alert("Plan registrado exitosamente");
+      toast.success("Plan registrado exitosamente");
     } catch (err) {
       console.error("Error al crear plan:", err);
-      alert("No se pudo registrar el plan");
+      toast.error("No se pudo registrar el plan");
     }
   };
 
   const handleEditar = async (plan: Plan) => {
     if (plan.id == null) {
-      alert("No se puede editar un plan sin ID");
+      toast.error("No se puede editar un plan sin ID");
       return;
     }
     try {
       const res = await actualizarPlan(plan.id, plan);
       setPlanes((prev) => prev.map((p) => (p.id === res.data.id ? res.data : p)));
       setPlanEditando(null);
-      alert("Plan actualizado exitosamente");
+      toast.success("Plan actualizado exitosamente");
     } catch (err) {
       console.error("Error al editar plan:", err);
-      alert("No se pudo actualizar el plan");
+      toast.error("No se pudo actualizar el plan");
     }
   };
 
   const handleEliminar = async (id?: number) => {
     if (id == null) {
-      alert("No se puede eliminar un plan sin ID");
+      toast.error("No se puede eliminar un plan sin ID");
       return;
     }
-    const confirmar = window.confirm("¿Está seguro que desea eliminar este plan?");
+    const confirmar = await confirm({
+      title: "Eliminar plan",
+      message: "¿Está seguro que desea eliminar este plan? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarPlan(id);
       setPlanes((prev) => prev.filter((p) => p.id !== id));
-      alert("Plan eliminado exitosamente");
+      toast.success("Plan eliminado exitosamente");
     } catch (err) {
       console.error("Error al eliminar plan:", err);
-      alert("No se pudo eliminar el plan");
+      toast.error("No se pudo eliminar el plan");
     }
   };
 
@@ -91,60 +98,18 @@ function GestionPlan() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-          }}>
-            Planes de Estudio
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Administre planes académicos y ciclos formativos
-          </p>
+        <div className="page-header">
+          <h1>Planes de Estudio</h1>
+          <p>Administre planes académicos y ciclos formativos</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <input
-              type="text"
-              placeholder="Buscar plan por nombre o descripción..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="form-input"
-              style={{ minWidth: '300px', flex: 1 }}
-            />
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nuevo Plan
-            </button>
-          </div>
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <input type="text" placeholder="Buscar plan por nombre o descripción..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '300px', flex: 1 }} />
+          <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Plan
+          </button>
         </div>
 
         {/* Tabla */}
@@ -230,40 +195,23 @@ function GestionPlan() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Planes
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {planes.length}
+            <div>
+              <div className="stat-value">{planes.length}</div>
+              <div className="stat-label">Total Planes</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {planesFiltrados.length}
+            <div>
+              <div className="stat-value">{planesFiltrados.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
         </div>
