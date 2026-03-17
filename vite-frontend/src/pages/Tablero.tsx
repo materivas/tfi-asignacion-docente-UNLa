@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente, Rol } from "../types";
 import { listarAsignaciones, actualizarAsignacion, crearAsignacion, eliminarAsignacion, exportarCalendarioExcel } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
@@ -57,7 +57,8 @@ function Tablero() {
 
   const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">("");
   const [filtroAnioAsignacion, setFiltroAnioAsignacion] = useState<number | "">(2025);
-  const [filtroTurno, setFiltroTurno] = useState<string | "">("");  const [filtroMateria, setFiltroMateria] = useState<string>("");
+  const [filtroTurno, setFiltroTurno] = useState<string | "">("");
+  const [filtroMateria, setFiltroMateria] = useState<string>("");
   const [filtroDocente, setFiltroDocente] = useState<string>("");
   const [selectedAnio, setSelectedAnio] = useState<number>(1);
   const [showWarnings, setShowWarnings] = useState(false);
@@ -157,9 +158,15 @@ function Tablero() {
 
   useEffect(() => { void fetchData(); }, []);
 
-  const getMateria = (id: number) => materias.find((m) => m.id === id);
-  const getAsignacionesDocentes = (asignacionId: number) =>
-    asignacionId != null ? asignacionesDocentes.filter((ad) => ad.asignacionId === asignacionId) : [];
+  const getMateria = useCallback(
+    (id: number) => materias.find((m) => m.id === id),
+    [materias]
+  );
+  const getAsignacionesDocentes = useCallback(
+    (asignacionId: number) =>
+      asignacionId != null ? asignacionesDocentes.filter((ad) => ad.asignacionId === asignacionId) : [],
+    [asignacionesDocentes]
+  );
 
   /* ──── Advertencias de carga ──── */
   const warnings = useMemo<Warning[]>(() => {
@@ -602,7 +609,7 @@ function Tablero() {
 
   useEffect(() => {
     if (aniosConDatos.length > 0 && !aniosConDatos.includes(selectedAnio)) setSelectedAnio(aniosConDatos[0]);
-  }, [aniosConDatos]);
+  }, [aniosConDatos, selectedAnio]);
 
   const borrarAsignacionDocente = async (id: number) => {
     if (!id) return;
@@ -627,9 +634,9 @@ function Tablero() {
     return turnos;
   }, [filtroTurno]);
 
-  const errCount = warnings.filter(w => w.type === 'error').length;
-  const warnCount = warnings.filter(w => w.type === 'warning').length;
-  const okCount = warnings.filter(w => w.type === 'info').length;
+  const errCount = useMemo(() => warnings.filter(w => w.type === 'error').length, [warnings]);
+  const warnCount = useMemo(() => warnings.filter(w => w.type === 'warning').length, [warnings]);
+  const okCount = useMemo(() => warnings.filter(w => w.type === 'info').length, [warnings]);
 
   const handleExportExcel = async () => {
     if (exportCuatrimestre === "") {

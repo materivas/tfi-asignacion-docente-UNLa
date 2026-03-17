@@ -23,11 +23,11 @@ export interface Cuatrimestre {
   numeroCuatri: number;
 }
 
-export type Categoria = {
+export interface Categoria {
   id?: number;
   nombre: string;
   maxMaterias: number;
-};
+}
 
 export interface ImportResultado {
   creados: number;
@@ -36,14 +36,14 @@ export interface ImportResultado {
   errores: string[];
 }
 
-export type Asignacion = {
+export interface Asignacion {
   id?: number;
   materiaId: number;
   cuatrimestreId: number;
   turno: string;
   anio: number;
   dia: string;
-};
+}
 
 export interface AsignacionDocente {
   id?: number;
@@ -55,8 +55,7 @@ export interface AsignacionDocente {
   confirmado: boolean;
 }
 
-export interface  Rol {
+export interface Rol {
   id: number;
   nombre: string;
-
-};
+}

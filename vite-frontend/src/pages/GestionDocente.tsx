@@ -18,7 +18,7 @@ function GestionDocente() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<number | "">("")
   const [importando, setImportando] = useState(false);
-  const [resultadoImport, setResultadoImport] = useState<{ creados: number; ignorados: number; errores: string[] } | null>(null);;
+  const [resultadoImport, setResultadoImport] = useState<{ creados: number; ignorados: number; errores: string[] } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
