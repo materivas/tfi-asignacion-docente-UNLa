@@ -10,6 +10,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -22,6 +23,9 @@ public class PlanService {
 
     @Autowired
     private PlanRepository planRepository;
+
+    @Autowired
+    private MateriaService materiaService;
 
     public List<PlanDto> listarTodos() {
         return planRepository.findAll().stream().map(PlanDto::fromEntity).toList();
@@ -44,7 +48,15 @@ public class PlanService {
         }).orElseThrow(() -> new RuntimeException("Plan no encontrado"));
     }
 
+    @Transactional
     public void eliminar(Long id) {
+        // Eliminar todas las materias asociadas (que a su vez eliminan sus asignaciones)
+        var materias = materiaService.listarTodos().stream()
+                .filter(m -> m.getPlanId() != null && m.getPlanId().equals(id))
+                .toList();
+        for (var materia : materias) {
+            materiaService.eliminar(materia.getId());
+        }
         planRepository.deleteById(id);
     }
 

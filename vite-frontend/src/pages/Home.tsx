@@ -16,7 +16,7 @@ const Home: React.FC = () => {
     flexDirection: 'column',
     alignItems: 'center',
     gap: 'var(--spacing-md)',
-    border: '2px solid transparent',
+    border: '1px solid transparent',
   };
 
   const iconStyle: React.CSSProperties = {
@@ -50,7 +50,7 @@ const Home: React.FC = () => {
               color: 'var(--color-primary)', 
               fontSize: 'var(--font-size-4xl)',
               marginBottom: 'var(--spacing-md)',
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           >
             Sistema de Gestión Docente
@@ -59,9 +59,9 @@ const Home: React.FC = () => {
             style={{
               color: 'var(--color-gray-600)',
               fontSize: 'var(--font-size-lg)',
-              maxWidth: '700px',
+              maxWidth: '800px',
               margin: '0 auto',
-              lineHeight: 1.7,
+              lineHeight: 1.6,
             }}
           >
             Plataforma integral para la administración de docentes, materias y asignaciones académicas de la Universidad Nacional de Lanús
@@ -74,7 +74,7 @@ const Home: React.FC = () => {
             style={{ 
               textAlign: 'center', 
               color: 'var(--color-gray-800)',
-              fontSize: 'var(--font-size-2xl)',
+              fontSize: 'var(--font-size-3xl)',
               marginBottom: 'var(--spacing-xl)',
               fontWeight: 600,
             }}
@@ -202,8 +202,7 @@ const Home: React.FC = () => {
             padding: 'var(--spacing-xl)',
             backgroundColor: 'var(--color-white)',
             borderRadius: 'var(--border-radius-lg)',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--color-gray-200)',
+            boxShadow: 'var(--shadow-md)',
           }}
         >
           <h3 
@@ -227,7 +226,7 @@ const Home: React.FC = () => {
           >
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: 'var(--spacing-sm)', color: 'var(--color-success)', fontWeight: 'bold' }}>✓</div>
-              <h4 style={{ color: 'var(--color-gray-700)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-xs)' }}>
+              <h4 style={{ color: 'var(--color-gray-800)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-sm)', fontWeight: 600 }}>
                 Gestión Completa
               </h4>
               <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
@@ -236,7 +235,7 @@ const Home: React.FC = () => {
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: 'var(--spacing-sm)', color: 'var(--color-secondary)', fontWeight: 'bold' }}>⌕</div>
-              <h4 style={{ color: 'var(--color-gray-700)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-xs)' }}>
+              <h4 style={{ color: 'var(--color-gray-800)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-sm)', fontWeight: 600 }}>
                 Filtros Avanzados
               </h4>
               <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
@@ -245,7 +244,7 @@ const Home: React.FC = () => {
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: 'var(--spacing-sm)', color: 'var(--color-primary)', fontWeight: 'bold' }}>⊞</div>
-              <h4 style={{ color: 'var(--color-gray-700)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-xs)' }}>
+              <h4 style={{ color: 'var(--color-gray-800)', fontSize: 'var(--font-size-base)', marginBottom: 'var(--spacing-sm)', fontWeight: 600 }}>
                 Diseño Responsive
               </h4>
               <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
@@ -260,14 +259,14 @@ const Home: React.FC = () => {
           style={{ 
             marginTop: 'var(--spacing-2xl)',
             textAlign: 'center',
-            color: 'var(--color-gray-500)',
+            color: 'var(--color-gray-600)',
             fontSize: 'var(--font-size-sm)',
           }}
         >
           <p style={{ margin: 0 }}>
             Trabajo Final Integrador - Licenciatura en Sistemas
           </p>
-          <p style={{ margin: '0.25rem 0 0 0', fontWeight: 500 }}>
+          <p style={{ margin: '0.5rem 0 0 0', color: 'var(--color-gray-600)' }}>
             Universidad Nacional de Lanús © 2026
           </p>
         </footer>

@@ -29,6 +29,13 @@ export type Categoria = {
   maxMaterias: number;
 };
 
+export interface ImportResultado {
+  creados: number;
+  ignorados: number;
+  filasIgnoradas: string[];
+  errores: string[];
+}
+
 export type Asignacion = {
   id?: number;
   materiaId: number;

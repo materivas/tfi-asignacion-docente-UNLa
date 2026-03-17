@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Asignacion, Materia, AsignacionDocente, Categoria, Docente, Rol } from "../types";
-import { listarAsignaciones } from "../api/asignacionApi";
+import { listarAsignaciones, actualizarAsignacion, crearAsignacion, eliminarAsignacion, exportarCalendarioExcel } from "../api/asignacionApi";
 import { listarMaterias } from "../api/materiaApi";
 import { listarAsignacionesDocentes, crearAsignacionDocente, eliminarAsignacionDocente, actualizarAsignacionDocente } from "../api/asignacionDocenteApi";
 import { listarCategorias } from "../api/categoriaApi";
@@ -56,11 +56,21 @@ function Tablero() {
 
   const [filtroCuatrimestre, setFiltroCuatrimestre] = useState<number | "">("");
   const [filtroAnioAsignacion, setFiltroAnioAsignacion] = useState<number | "">(2025);
-  const [filtroTurno, setFiltroTurno] = useState<string | "">("");
-
+  const [filtroTurno, setFiltroTurno] = useState<string | "">("");  const [filtroMateria, setFiltroMateria] = useState<string>("");
+  const [filtroDocente, setFiltroDocente] = useState<string>("");
   const [selectedAnio, setSelectedAnio] = useState<number>(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [warningFilter, setWarningFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
+  const [exporting, setExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportCuatrimestre, setExportCuatrimestre] = useState<number | "">("")
+
+  // Estado para modal de nueva asignación
+  const [showAddAsignacionModal, setShowAddAsignacionModal] = useState(false);
+  const [addAsignacionDia, setAddAsignacionDia] = useState<string>("");
+  const [addAsignacionTurno, setAddAsignacionTurno] = useState<string>("");
+  const [addAsignacionMateriaId, setAddAsignacionMateriaId] = useState<number | "">("");
+  const [addAsignacionCuatrimestreId, setAddAsignacionCuatrimestreId] = useState<number | "">("");
 
   const [draggedItem, setDraggedItem] = useState<{
     asignacionDocenteId: number;
@@ -68,6 +78,12 @@ function Tablero() {
     docenteNombre: string;
     rolId: number;
     fromAsignacionId: number;
+  } | null>(null);
+
+  const [draggedAsignacion, setDraggedAsignacion] = useState<{
+    asignacionId: number;
+    fromDia: string;
+    fromTurno: string;
   } | null>(null);
 
   const docentesFiltrados = Array.from(docentesLookup.values()).filter((d) =>
@@ -340,6 +356,87 @@ function Tablero() {
     }
   };
 
+  const handleDragStartAsignacion = (e: React.DragEvent, asignacionId: number, dia: string, turno: string) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("asignacionId", String(asignacionId));
+    setDraggedAsignacion({ asignacionId, fromDia: dia, fromTurno: turno });
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.6';
+      e.currentTarget.style.borderColor = '#7A1F1F';
+      e.currentTarget.style.borderWidth = '2px';
+    }
+  };
+
+  const handleDragEndAsignacion = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+      e.currentTarget.style.borderColor = 'transparent';
+      e.currentTarget.style.borderWidth = '1px';
+    }
+    setDraggedAsignacion(null);
+  };
+
+  const handleDropAsignacion = async (e: React.DragEvent, toDia: string, toTurno: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedAsignacion) {
+      setDraggedAsignacion(null);
+      return;
+    }
+
+    const { asignacionId, fromDia, fromTurno } = draggedAsignacion;
+
+    // Si es la misma celda, no hacer nada
+    if (fromDia === toDia && fromTurno === toTurno) {
+      setDraggedAsignacion(null);
+      return;
+    }
+
+    try {
+      // Obtener la asignación original
+      const asignacion = asignaciones.find(a => a.id === asignacionId);
+      if (!asignacion) {
+        alert("Asignación no encontrada");
+        setDraggedAsignacion(null);
+        return;
+      }
+
+      // Actualizar la asignación con el nuevo día y turno
+      const updatedAsignacion: Asignacion = {
+        ...asignacion,
+        dia: toDia,
+        turno: toTurno
+      };
+
+      await actualizarAsignacion(asignacionId, updatedAsignacion);
+      await fetchData();
+      setDraggedAsignacion(null);
+    } catch (err: any) {
+      console.error("Error al mover materia:", err);
+      alert(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      setDraggedAsignacion(null);
+    }
+  };
+
+  const handleDragOverAsignacion = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.background = '#fef7f7';
+      e.currentTarget.style.borderColor = '#7A1F1F';
+      e.currentTarget.style.borderStyle = 'dashed';
+    }
+  };
+
+  const handleDragLeaveAsignacion = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.background = '#fff';
+      e.currentTarget.style.borderColor = '#f1f5f9';
+      e.currentTarget.style.borderStyle = 'solid';
+    }
+  };
+
   const extraerNumeroCuatrimestre = (a: Asignacion): number | null => {
     const maybe = a as any;
     const cand =
@@ -363,6 +460,15 @@ function Tablero() {
         if (filtroTurno && a.turno !== filtroTurno) return false;
         const materia = getMateria(a.materiaId);
         if (!materia || materia.anio !== anio) return false;
+        if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.toLowerCase())) return false;
+        if (filtroDocente) {
+          const docs = (a.id != null ? getAsignacionesDocentes(a.id) : []).filter((ad) => ad.confirmado === true);
+          const hasDocente = docs.some((ad) => {
+            const docenteReal = docentesLookup.get(ad.docenteId);
+            return docenteReal?.nombre.toLowerCase().includes(filtroDocente.toLowerCase());
+          });
+          if (!hasDocente) return false;
+        }
         return a.dia === dia && a.turno === turno;
       })
       .sort((a, b) => (getMateria(a.materiaId)?.nombre ?? "").localeCompare(getMateria(b.materiaId)?.nombre ?? ""));
@@ -397,7 +503,62 @@ function Tablero() {
     return Array.from(s).sort((x, y) => x - y);
   }, [asignaciones]);
 
-  const resetFiltros = () => { setFiltroCuatrimestre(""); setFiltroAnioAsignacion(2025); setFiltroTurno(""); };
+  const resetFiltros = () => { setFiltroCuatrimestre(""); setFiltroAnioAsignacion(2025); setFiltroTurno(""); setFiltroMateria(""); setFiltroDocente(""); };
+
+  /* ──── Crear nueva asignación ──── */
+  const abrirAddAsignacionModal = (dia: string, turno: string) => {
+    setAddAsignacionDia(dia);
+    setAddAsignacionTurno(turno);
+    setAddAsignacionMateriaId("");
+    // Pre-seleccionar cuatrimestre si hay filtro activo
+    const cuatEntries = Array.from(cuatrimestresMap.entries());
+    if (filtroCuatrimestre !== "") {
+      const found = cuatEntries.find(([, num]) => num === Number(filtroCuatrimestre));
+      setAddAsignacionCuatrimestreId(found ? found[0] : "");
+    } else {
+      setAddAsignacionCuatrimestreId(cuatEntries.length > 0 ? cuatEntries[0][0] : "");
+    }
+    setShowAddAsignacionModal(true);
+  };
+
+  const confirmarAddAsignacion = async () => {
+    if (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") {
+      alert("Seleccioná una materia y un cuatrimestre.");
+      return;
+    }
+    try {
+      await crearAsignacion({
+        materiaId: Number(addAsignacionMateriaId),
+        cuatrimestreId: Number(addAsignacionCuatrimestreId),
+        turno: addAsignacionTurno,
+        anio: filtroAnioAsignacion !== "" ? Number(filtroAnioAsignacion) : new Date().getFullYear(),
+        dia: addAsignacionDia,
+      });
+      await fetchData();
+      setShowAddAsignacionModal(false);
+    } catch (err: any) {
+      console.error("Error al crear asignación:", err);
+      alert(`Error al crear: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
+
+  /* ──── Eliminar asignación completa ──── */
+  const borrarAsignacion = async (id: number) => {
+    if (!id) return;
+    if (!window.confirm("¿Seguro que querés eliminar esta asignación completa (materia + docentes asignados)?")) return;
+    try {
+      await eliminarAsignacion(id);
+      await fetchData();
+    } catch (err: any) {
+      console.error("Error al eliminar asignación:", err?.response?.data ?? err);
+      alert(`Error al eliminar: ${err?.response?.data?.message ?? err?.message}`);
+    }
+  };
+
+  // Materias filtradas por año seleccionado para el modal de agregar
+  const materiasParaAgregar = useMemo(() => {
+    return materias.filter(m => m.anio === selectedAnio).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [materias, selectedAnio]);
 
   /* ──── Stats rápidos ──── */
   const stats = useMemo(() => {
@@ -450,12 +611,32 @@ function Tablero() {
 
   const turnosVisibles = useMemo(() => {
     if (filtroTurno) return [filtroTurno];
-    return turnos.filter(t => diasSemana.some(d => getAsignacionesPorDiaTurnoAnio(d, t, selectedAnio).length > 0));
-  }, [asignaciones, selectedAnio, filtroTurno, filtroCuatrimestre, filtroAnioAsignacion]);
+    return turnos;
+  }, [filtroTurno]);
 
   const errCount = warnings.filter(w => w.type === 'error').length;
   const warnCount = warnings.filter(w => w.type === 'warning').length;
   const okCount = warnings.filter(w => w.type === 'info').length;
+
+  const handleExportExcel = async () => {
+    if (exportCuatrimestre === "") {
+      alert("Seleccioná un cuatrimestre para exportar");
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportarCalendarioExcel(
+        filtroAnioAsignacion,
+        exportCuatrimestre
+      );
+      setShowExportModal(false);
+    } catch (err) {
+      console.error("Error al exportar Excel:", err);
+      alert("Error al exportar el calendario a Excel");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)', minHeight: '100vh' }}>
@@ -468,7 +649,7 @@ function Tablero() {
         .cal-cell:hover { background: #fafbfd; }
         .cal-cell.drag-target { background: #fffbeb; border: 2px dashed #f59e0b; }
         .cal-corner { background: linear-gradient(135deg, var(--color-primary) 0%, #5a1414 100%); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; }
-        .materia-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; }
+        .materia-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; transition: all 0.15s; cursor: move; user-select: none; }
         .materia-card:hover { border-color: var(--color-primary); box-shadow: 0 2px 8px rgba(122,31,31,0.08); }
         .materia-card-name { font-size: 11px; font-weight: 700; color: var(--color-primary); margin-bottom: 5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .docente-chip { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 8px; margin: 3px 0; cursor: grab; display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-size: 11px; }
@@ -587,6 +768,10 @@ function Tablero() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M23 4v6h-6M1 20v-6h6" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
               {refreshing ? "Actualizando…" : "Actualizar"}
             </button>
+            <button onClick={() => { setExportCuatrimestre(""); setShowExportModal(true); }} style={{ padding: '10px 18px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+              Exportar Excel
+            </button>
             <button onClick={() => setShowWarnings(true)} style={{ position: 'relative', padding: '10px 18px', background: (errCount + conflictos.length) > 0 ? '#fef2f2' : '#ecfdf5', border: `1px solid ${(errCount + conflictos.length) > 0 ? '#fecaca' : '#a7f3d0'}`, borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', color: (errCount + conflictos.length) > 0 ? '#991b1b' : '#065f46', display: 'flex', alignItems: 'center', gap: 6 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               Alertas
@@ -665,6 +850,8 @@ function Tablero() {
                 {turnos.map((t) => <option key={t} value={t}>{turnoLabels[t]}</option>)}
               </select>
             </div>
+            <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
+            <input type="text" placeholder="Buscar docente..." value={filtroDocente} onChange={(e) => setFiltroDocente(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
             <button onClick={resetFiltros} style={{ padding: '0 14px', height: 38, background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#64748b' }}>Limpiar</button>
           </div>
         </div>
@@ -702,9 +889,18 @@ function Tablero() {
                   {diasSemana.map((dia) => {
                     const asigs = getAsignacionesPorDiaTurnoAnio(dia, turno, selectedAnio);
                     return (
-                      <div key={`${turno}-${dia}`} className={`cal-cell ${draggedItem ? 'drag-target' : ''}`} onDragOver={handleDragOver} onDrop={(e) => { const first = asigs[0]; if (first?.id) handleDrop(e, first.id); }}>
+                      <div key={`${turno}-${dia}`} className={`cal-cell ${draggedItem ? 'drag-target' : ''}`} onDragOver={(e) => { handleDragOver(e); draggedAsignacion && handleDragOverAsignacion(e); }} onDrop={(e) => { const first = asigs[0]; if (first?.id) handleDrop(e, first.id); draggedAsignacion && handleDropAsignacion(e, dia, turno); }} onDragLeave={draggedAsignacion ? handleDragLeaveAsignacion : undefined}>
                         {asigs.length === 0 ? (
-                          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e2e8f0', fontSize: 20 }}>—</div>
+                          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <button
+                              onClick={() => abrirAddAsignacionModal(dia, turno)}
+                              style={{ width: 36, height: 36, borderRadius: '50%', border: '2px dashed #cbd5e1', background: 'transparent', color: '#94a3b8', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = '#fef7f7'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
+                              title="Agregar asignación"
+                            >+</button>
+                            <span style={{ fontSize: 10, color: '#cbd5e1' }}>Agregar</span>
+                          </div>
                         ) : (
                           asigs.map((asignacion) => {
                             const materia = getMateria(asignacion.materiaId);
@@ -717,8 +913,19 @@ function Tablero() {
                               });
 
                             return (
-                              <div key={asignacion.id} className="materia-card" onDragOver={handleDragOver} onDrop={(e) => { e.stopPropagation(); handleDrop(e, asignacion.id!); }}>
-                                <div className="materia-card-name">{materia.nombre}</div>
+                              <div key={asignacion.id} className="materia-card" draggable onDragStart={(e) => handleDragStartAsignacion(e, asignacion.id!, dia, turno)} onDragEnd={handleDragEndAsignacion} onDragOver={handleDragOverAsignacion} onDragLeave={handleDragLeaveAsignacion}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
+                                  <div className="materia-card-name" style={{ flex: 1 }}>{materia.nombre}</div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); borrarAsignacion(asignacion.id!); }}
+                                    style={{ width: 20, height: 20, padding: 0, background: 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#fff5f5'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'transparent'; }}
+                                    title="Eliminar asignación"
+                                  >
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5"/></svg>
+                                  </button>
+                                </div>
                                 {docentes.length === 0 ? (
                                   <button className="add-btn" onClick={() => abrirModal(asignacion.id!)}>+ Asignar docente</button>
                                 ) : (
@@ -747,14 +954,23 @@ function Tablero() {
                                         </div>
                                       );
                                     })}
-                                    {docentes.length < 2 && (
-                                      <button className="add-btn" onClick={() => abrirModal(asignacion.id!)} style={{ marginTop: 4 }}>+ Agregar</button>
+                                    {docentes.length < 3 && (
+                                      <button className="add-btn" onClick={() => abrirModal(asignacion.id!)} style={{ marginTop: 4 }}>+ Agregar docente</button>
                                     )}
                                   </>
                                 )}
                               </div>
                             );
                           })
+                        )}
+                        {asigs.length > 0 && (
+                          <button
+                            onClick={() => abrirAddAsignacionModal(dia, turno)}
+                            style={{ width: '100%', padding: 4, background: 'transparent', border: '1.5px dashed #e2e8f0', borderRadius: 6, fontSize: 14, color: '#cbd5e1', cursor: 'pointer', transition: 'all 0.15s', marginTop: 4 }}
+                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)'; e.currentTarget.style.background = '#fef7f7'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'transparent'; }}
+                            title="Agregar otra asignación"
+                          >+</button>
                         )}
                       </div>
                     );
@@ -776,6 +992,57 @@ function Tablero() {
           ))}
         </div>
       </div>
+
+      {/* ──── MODAL AGREGAR ASIGNACIÓN ──── */}
+      {showAddAsignacionModal && (
+        <Modal onClose={() => setShowAddAsignacionModal(false)}>
+          <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary)', marginTop: 0, marginBottom: 20 }}>
+            Nueva Asignación
+          </h3>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              📅 {addAsignacionDia}
+            </div>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              {turnoIcons[addAsignacionTurno]} {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
+            </div>
+            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+              🎓 {selectedAnio}° Año
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Materia</label>
+              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionMateriaId} onChange={(e) => setAddAsignacionMateriaId(e.target.value === "" ? "" : Number(e.target.value))}>
+                <option value="">Seleccioná una materia…</option>
+                {materiasParaAgregar.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                ))}
+              </select>
+              {materiasParaAgregar.length === 0 && (
+                <div style={{ marginTop: 6, fontSize: 12, color: '#f59e0b' }}>
+                  ⚠️ No hay materias registradas para {selectedAnio}° Año
+                </div>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Cuatrimestre</label>
+              <select style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} value={addAsignacionCuatrimestreId} onChange={(e) => setAddAsignacionCuatrimestreId(e.target.value === "" ? "" : Number(e.target.value))}>
+                <option value="">Seleccioná cuatrimestre…</option>
+                {Array.from(cuatrimestresMap.entries()).map(([id, num]) => (
+                  <option key={id} value={id}>Cuatrimestre {num}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
+              <button onClick={() => setShowAddAsignacionModal(false)} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
+              <button onClick={confirmarAddAsignacion} disabled={addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === ""} style={{ flex: 1, padding: '12px', background: 'var(--color-primary)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 'not-allowed' : 'pointer', color: '#fff', opacity: (addAsignacionMateriaId === "" || addAsignacionCuatrimestreId === "") ? 0.5 : 1 }}>
+                Crear Asignación
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ──── MODAL ──── */}
       {showModal && (
@@ -827,6 +1094,49 @@ function Tablero() {
               <button onClick={cerrarModal} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
               <button onClick={confirmarAsignacionDocente} disabled={selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === ""} style={{ flex: 1, padding: '12px', background: 'var(--color-primary)', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") ? 'not-allowed' : 'pointer', color: '#fff', opacity: (selectedAsignacionId == null || selectedDocenteId === "" || selectedRolId === "") ? 0.5 : 1 }}>
                 {editandoAsignacionDocenteId ? "Actualizar" : "Asignar"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de exportar Excel */}
+      {showExportModal && (
+        <Modal onClose={() => setShowExportModal(false)}>
+          <div style={{ padding: 28, minWidth: 360 }}>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 800, color: 'var(--color-primary)' }}>Exportar a Excel</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b' }}>Seleccioná el cuatrimestre que querés exportar</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Año</label>
+              <div style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, color: '#1e293b' }}>
+                {filtroAnioAsignacion === "" ? "Todos los años" : filtroAnioAsignacion}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 8, display: 'block' }}>Cuatrimestre *</label>
+              <select
+                style={{ width: '100%', height: 42, borderRadius: 8, border: '1px solid #e2e8f0', padding: '0 14px', background: '#fff', fontSize: 14, boxSizing: 'border-box' }}
+                value={exportCuatrimestre}
+                onChange={(e) => setExportCuatrimestre(e.target.value === "" ? "" : Number(e.target.value))}
+              >
+                <option value="">Seleccioná un cuatrimestre…</option>
+                {Array.from(cuatrimestresMap.entries()).sort((a, b) => a[1] - b[1]).map(([id, num]) => (
+                  <option key={id} value={num}>Cuatrimestre {num}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, paddingTop: 16, borderTop: '1px solid #e5e9ed' }}>
+              <button onClick={() => setShowExportModal(false)} style={{ flex: 1, padding: '12px', background: '#fff', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#475569' }}>Cancelar</button>
+              <button
+                onClick={handleExportExcel}
+                disabled={exportCuatrimestre === "" || exporting}
+                style={{ flex: 1, padding: '12px', background: '#065f46', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: (exportCuatrimestre === "" || exporting) ? 'not-allowed' : 'pointer', color: '#fff', opacity: (exportCuatrimestre === "" || exporting) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                {exporting ? "Exportando…" : "Exportar"}
               </button>
             </div>
           </div>

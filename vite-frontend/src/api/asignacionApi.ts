@@ -16,3 +16,23 @@ export const actualizarAsignacion = (id: number, Asignacion: Asignacion) =>
 
 export const eliminarAsignacion = (id: number) =>
   axios.delete(`${BASE_URL}/${id}`, { withCredentials: true });
+
+export const exportarCalendarioExcel = async (anio?: number | "", cuatrimestre?: number | "") => {
+  const params = new URLSearchParams();
+  if (anio !== undefined && anio !== "") params.append("anio", String(anio));
+  if (cuatrimestre !== undefined && cuatrimestre !== "") params.append("cuatrimestre", String(cuatrimestre));
+  const response = await axios.get(`${BASE_URL}/exportar-excel`, {
+    params,
+    responseType: 'blob',
+  });
+  // Descargar el archivo
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  const filename = `calendario_docentes${anio ? '_' + anio : ''}.xlsx`;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
