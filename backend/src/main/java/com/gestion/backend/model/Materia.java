@@ -28,5 +28,7 @@ public class Materia {
 
     @Column(name = "anio")
     private Integer anio;
-    
+
+    @Column(name = "codigo")
+    private Integer codigo;
 }

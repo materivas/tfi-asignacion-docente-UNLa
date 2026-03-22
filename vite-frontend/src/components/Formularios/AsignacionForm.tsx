@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import type { Asignacion, Materia, Cuatrimestre } from "../../types";
 
 interface Props {
-  materias: Pick<Materia, "id" | "nombre">[] | undefined;
+  materias: Pick<Materia, "id" | "nombre" | "codigo">[] | undefined;
   cuatrimestres: Pick<Cuatrimestre, "id" | "numeroCuatri">[] | undefined;
   AsignacionInicial?: Asignacion;
   onSubmit?: (asignacion: Asignacion) => void;
@@ -23,29 +23,49 @@ const AsignacionForm: React.FC<Props> = ({
   const [anio, setAnio] = useState<number | "">(AsignacionInicial?.anio ?? "");
   const [dia, setDia] = useState<string>(AsignacionInicial?.dia ?? "");
 
+  const materiaSel = materias?.find((m) => m.id === Number(materiaId));
+  const abreviarTurno = (valorTurno: string) => {
+    if (!valorTurno) return "";
+
+    const turnoNormalizado = valorTurno
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+    if (turnoNormalizado.includes("manana") || turnoNormalizado.includes("maniana")) return "TM";
+    if (turnoNormalizado.includes("tarde")) return "TT";
+    if (turnoNormalizado.includes("noche")) return "TN";
+    return "";
+  };
+
+  const comisionPreview = materiaSel?.codigo && turno
+    ? `${materiaSel.codigo}-1 ${abreviarTurno(turno)}`
+    : "-";
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!materiaId || !cuatrimestreId || turno === "" || anio === "" || dia === "") {
-      alert("Completá todos los campos.");
+      alert("Completa todos los campos.");
       return;
     }
 
-const nuevaAsignacion: Asignacion = AsignacionInicial?.id
-  ? {
-      id: AsignacionInicial.id,
-      materiaId: Number(materiaId),
-      cuatrimestreId: Number(cuatrimestreId),
-      turno,
-      anio: Number(anio),
-      dia
-    }
-  : {
-      materiaId: Number(materiaId),
-      cuatrimestreId: Number(cuatrimestreId),
-      turno,
-      anio: Number(anio),
-      dia
-    };
+    const nuevaAsignacion: Asignacion = AsignacionInicial?.id
+      ? {
+          id: AsignacionInicial.id,
+          materiaId: Number(materiaId),
+          cuatrimestreId: Number(cuatrimestreId),
+          turno,
+          anio: Number(anio),
+          dia
+        }
+      : {
+          materiaId: Number(materiaId),
+          cuatrimestreId: Number(cuatrimestreId),
+          turno,
+          anio: Number(anio),
+          dia
+        };
 
     onSubmit?.(nuevaAsignacion);
   };
@@ -61,7 +81,7 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
       <h3 style={{ textAlign: "center" }}>
-        {AsignacionInicial ? "Editar Asignación" : "Alta de Asignación"}
+        {AsignacionInicial ? "Editar Asignacion" : "Alta de Asignacion"}
       </h3>
 
       <label>Materia:</label>
@@ -102,12 +122,29 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
         style={inputEstilo}
       >
         <option value="">Seleccione</option>
-        <option value="Maniana">Mañana</option>
+        <option value="Mañana">Mañana</option>
         <option value="Tarde">Tarde</option>
         <option value="Noche">Noche</option>
       </select>
 
-      <label>Día:</label>
+      <label>Comision (generada automaticamente):</label>
+      <div
+        style={{
+          display: "block",
+          width: "100%",
+          padding: "0.5rem",
+          marginBottom: "1rem",
+          borderRadius: "4px",
+          border: "1px solid #ddd",
+          backgroundColor: "#f5f5f5",
+          fontWeight: "600",
+          color: "#333"
+        }}
+      >
+        {comisionPreview}
+      </div>
+
+      <label>Dia:</label>
       <select
         value={dia}
         onChange={(e) => setDia(e.target.value)}
@@ -123,7 +160,7 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
         <option value="Sabado">Sabado</option>
       </select>
 
-      <label>Año:</label>
+      <label>Anio:</label>
       <input
         type="number"
         value={anio}
@@ -142,7 +179,7 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
           onClick={onCancel}
           style={{ ...btnEstilo, backgroundColor: "#999", marginTop: "0.5rem" }}
         >
-          Cancelar edición
+          Cancelar edicion
         </button>
       )}
     </form>

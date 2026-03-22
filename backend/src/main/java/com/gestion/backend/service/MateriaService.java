@@ -56,6 +56,7 @@ public class MateriaService {
         return MateriaDto.fromEntity(materiaRepository.save(materia));
     }
 
+    @Transactional
     public MateriaDto actualizar(Long id, MateriaDto dto) {
         Plan plan = planRepository.findById(dto.getPlanId())
             .orElseThrow(() -> new RuntimeException("Plan no encontrado"));
@@ -63,7 +64,10 @@ public class MateriaService {
             materia.setNombre(dto.getNombre());
             materia.setPlan(plan);
             materia.setAnio(dto.getAnio());
-            return MateriaDto.fromEntity(materiaRepository.save(materia));
+            materia.setCodigo(dto.getCodigo());
+            Materia materiaActualizada = materiaRepository.save(materia);
+            actualizarComisionesAsignaciones(materiaActualizada.getId());
+            return MateriaDto.fromEntity(materiaActualizada);
         }).orElseThrow(() -> new RuntimeException("Materia no encontrada"));
     }
 
@@ -111,6 +115,7 @@ public class MateriaService {
                     String nombre = obtenerTexto(fila.getCell(0));
                     String nombrePlan = obtenerTexto(fila.getCell(1));
                     String anioStr = obtenerTexto(fila.getCell(2));
+                    String codigoStr = obtenerTexto(fila.getCell(3));
                     
                     // Ignorar filas completamente vacías
                     if (nombre.isEmpty() && nombrePlan.isEmpty() && anioStr.isEmpty()) {
@@ -144,6 +149,14 @@ public class MateriaService {
                             nueva.setAnio(Integer.parseInt(anioStr));
                         } catch (NumberFormatException e) {
                             errores.add("Fila " + (i + 1) + ": año inválido");
+                            continue;
+                        }
+                    }
+                    if (!codigoStr.isEmpty()) {
+                        try {
+                            nueva.setCodigo(Integer.parseInt(codigoStr));
+                        } catch (NumberFormatException e) {
+                            errores.add("Fila " + (i + 1) + ": código inválido");
                             continue;
                         }
                     }
@@ -181,4 +194,17 @@ public class MateriaService {
             default -> "";
         };
     }
-} 
+
+    private void actualizarComisionesAsignaciones(Long materiaId) {
+        List<Asignacion> asignaciones = asignacionRepository.findByMateriaId(materiaId);
+        if (asignaciones.isEmpty()) {
+            return;
+        }
+
+        for (Asignacion asignacion : asignaciones) {
+            asignacion.generarComision();
+        }
+
+        asignacionRepository.saveAll(asignaciones);
+    }
+}

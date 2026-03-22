@@ -10,15 +10,16 @@ public class MateriaDto {
     private String nombre;
     private Long planId;
     private Integer anio;
-
+    private Integer codigo;
 
     public MateriaDto() {}
 
-    public MateriaDto(Long id, String nombre, Long planId, Integer anio) {
+    public MateriaDto(Long id, String nombre, Long planId, Integer anio, Integer codigo) {
         this.id = id;
         this.nombre = nombre;
         this.planId = planId;
         this.anio = anio;
+        this.codigo = codigo;
     }
 
     public static MateriaDto fromEntity(Materia materia) {
@@ -26,7 +27,8 @@ public class MateriaDto {
             materia.getId(),
             materia.getNombre(),
             materia.getPlan() != null ? materia.getPlan().getId() : null,
-            materia.getAnio()
+            materia.getAnio(),
+            materia.getCodigo()
         );
     }
 
@@ -36,6 +38,7 @@ public class MateriaDto {
         materia.setNombre(dto.getNombre());
         materia.setPlan(plan);
         materia.setAnio(dto.getAnio());
+        materia.setCodigo(dto.getCodigo());
         return materia;
     }
 
@@ -69,6 +72,14 @@ public class MateriaDto {
 
     public void setAnio(Integer anio) {
         this.anio = anio;
+    }
+
+    public Integer getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(Integer codigo) {
+        this.codigo = codigo;
     }
 
 }

@@ -13,6 +13,7 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
   const [nombre, setNombre] = useState(materiaInicial?.nombre ?? "");
   const [planId, setPlanId] = useState<number | "">(materiaInicial?.planId ?? "");
   const [anio, setAnio] = useState<number | "">(materiaInicial?.anio ?? "");
+  const [codigo, setCodigo] = useState<number | "">(materiaInicial?.codigo ?? "");
 
   if (!planes || !Array.isArray(planes)) {
     return (
@@ -33,6 +34,7 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
       nombre,
       anio: Number(anio),
       planId: Number(planId),
+      codigo: codigo ? Number(codigo) : undefined,
       ...(materiaInicial?.id != null && { id: materiaInicial.id })
     };
 
@@ -40,6 +42,7 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
       await onSubmit(materia);
       setNombre("");
       setPlanId("");
+      setCodigo("");
     }
   };
 
@@ -65,6 +68,15 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
   required
   style={inputEstilo}
 />
+
+      <label>Código:</label>
+      <input
+        type="number"
+        value={codigo}
+        onChange={(e) => setCodigo(Number(e.target.value))}
+        placeholder="Ej: 25"
+        style={inputEstilo}
+      />
 
       <label>Plan académico:</label>
       <select
