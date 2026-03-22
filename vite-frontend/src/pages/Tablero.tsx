@@ -9,15 +9,27 @@ import { listarCuatrimestres } from "../api/cuatrimestreApi";
 import { listarRoles } from "../api/rolApi";
 import Modal from "src/components/Modal";
 
+const normalizarTurno = (turno: string) =>
+  turno
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace("maniana", "manana");
+
 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 const diasCortos: Record<string, string> = {
   Lunes: "LUN", Martes: "MAR", Miercoles: "MIÉ", Jueves: "JUE", Viernes: "VIE", Sabado: "SÁB"
 };
-const turnos = ["Maniana", "Tarde", "Noche"];
+const turnos = ["Mañana", "Tarde", "Noche"];
 const turnoLabels: Record<string, string> = { Maniana: "Mañana", Tarde: "Tarde", Noche: "Noche" };
 const turnoIcons: Record<string, string> = { Maniana: "☀️", Tarde: "🌤️", Noche: "🌙" };
 const turnoColors: Record<string, string> = { Maniana: "#fbbf24", Tarde: "#fb923c", Noche: "#6366f1" };
 const anios = [1, 2, 3, 4, 5];
+const turnosCanonicos = ["Mañana", "Tarde", "Noche"];
+const mostrarTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "Mañana" : turno;
+const iconoTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "☀️" : turnoIcons[turno];
+const colorTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "#fbbf24" : turnoColors[turno];
 
 interface Warning {
   id: string;
@@ -457,7 +469,7 @@ function Tablero() {
       .filter((a) => {
         if (filtroCuatrimestre !== "") { const nro = extraerNumeroCuatrimestre(a); if (nro == null || nro !== Number(filtroCuatrimestre)) return false; }
         if (filtroAnioAsignacion !== "" && a.anio !== filtroAnioAsignacion) return false;
-        if (filtroTurno && a.turno !== filtroTurno) return false;
+        if (filtroTurno && normalizarTurno(a.turno ?? "") !== normalizarTurno(filtroTurno)) return false;
         const materia = getMateria(a.materiaId);
         if (!materia || materia.anio !== anio) return false;
         if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.toLowerCase())) return false;
@@ -469,7 +481,7 @@ function Tablero() {
           });
           if (!hasDocente) return false;
         }
-        return a.dia === dia && a.turno === turno;
+        return a.dia === dia && normalizarTurno(a.turno ?? "") === normalizarTurno(turno);
       })
       .sort((a, b) => (getMateria(a.materiaId)?.nombre ?? "").localeCompare(getMateria(b.materiaId)?.nombre ?? ""));
 
@@ -611,7 +623,7 @@ function Tablero() {
 
   const turnosVisibles = useMemo(() => {
     if (filtroTurno) return [filtroTurno];
-    return turnos;
+    return turnosCanonicos;
   }, [filtroTurno]);
 
   const errCount = warnings.filter(w => w.type === 'error').length;
@@ -715,7 +727,7 @@ function Tablero() {
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ec4899', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>!</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{c.docenteNombre}</div>
-                    <div style={{ fontSize: 11, opacity: 0.8 }}>{c.dia} {turnoLabels[c.turno] ?? c.turno}: {c.materias.join(' + ')}</div>
+                    <div style={{ fontSize: 11, opacity: 0.8 }}>{c.dia} {mostrarTurno(c.turno)}: {c.materias.join(' + ')}</div>
                   </div>
                 </div>
               ))}
@@ -847,7 +859,7 @@ function Tablero() {
               <label>Turno</label>
               <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>
                 <option value="">Todos</option>
-                {turnos.map((t) => <option key={t} value={t}>{turnoLabels[t]}</option>)}
+                {turnosCanonicos.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} style={{ height: 38, borderRadius: 10, border: '1px solid #e2e8f0', padding: '0 12px', fontSize: 13, background: '#fff', boxSizing: 'border-box' }} />
@@ -882,8 +894,8 @@ function Tablero() {
               {turnosVisibles.map((turno) => (
                 <>
                   <div key={`label-${turno}`} className="cal-turno-label">
-                    <span style={{ fontSize: 22 }}>{turnoIcons[turno]}</span>
-                    <span style={{ color: turnoColors[turno], fontWeight: 800, fontSize: 13 }}>{turnoLabels[turno] ?? turno}</span>
+                    <span style={{ fontSize: 22 }}>{iconoTurno(turno)}</span>
+                    <span style={{ color: colorTurno(turno), fontWeight: 800, fontSize: 13 }}>{mostrarTurno(turno)}</span>
                   </div>
 
                   {diasSemana.map((dia) => {
@@ -1004,7 +1016,7 @@ function Tablero() {
               📅 {addAsignacionDia}
             </div>
             <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              {turnoIcons[addAsignacionTurno]} {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
+              {iconoTurno(addAsignacionTurno)} {mostrarTurno(addAsignacionTurno)}
             </div>
             <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
               🎓 {selectedAnio}° Año

@@ -11,6 +11,17 @@ import { listarMaterias } from "../api/materiaApi";
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
 import type { Asignacion, Materia, Cuatrimestre } from "../types";
 
+const normalizarTurno = (turno: string) =>
+  turno
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace("maniana", "manana");
+
+const mostrarTurno = (turno: string) =>
+  normalizarTurno(turno) === "manana" ? "Mañana" : turno;
+
 function GestionAsignacion() {
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
@@ -97,7 +108,8 @@ function GestionAsignacion() {
     return asignaciones.filter((asig) => {
       const materia = materias.find((m) => m.id === asig.materiaId);
       const matchBusqueda = materia?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ?? false;
-      const matchTurno = filtroTurno === "" || asig.turno === filtroTurno;
+      const matchTurno =
+        filtroTurno === "" || normalizarTurno(asig.turno ?? "") === normalizarTurno(filtroTurno);
       const matchAnio = filtroAnio === "" || asig.anio === filtroAnio;
       const matchDia = filtroDia === "" || asig.dia === filtroDia;
       return matchBusqueda && matchTurno && matchAnio && matchDia;
@@ -105,7 +117,7 @@ function GestionAsignacion() {
   }, [asignaciones, materias, busqueda, filtroTurno, filtroAnio, filtroDia]);
 
   // Turnos y días disponibles
-  const turnosDisponibles = ["Maniana", "Tarde", "Noche"];
+  const turnosDisponibles = ["Mañana", "Tarde", "Noche"];
   const diasDisponibles = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
   const aniosDisponibles = useMemo(() => {
     const anios = new Set(asignaciones.map(a => a.anio).filter(Boolean));
@@ -251,6 +263,8 @@ function GestionAsignacion() {
                   <th style={{ textAlign: 'center', width: '100px' }}>Año</th>
                   <th style={{ textAlign: 'center', width: '120px' }}>Turno</th>
                   <th style={{ textAlign: 'center', width: '120px' }}>Día</th>
+                  <th style={{ textAlign: 'center', width: '100px' }}>Código</th>
+                  <th style={{ textAlign: 'center', width: '150px' }}>Comisión</th>
                   <th style={{ textAlign: 'center', width: '180px' }}>Acciones</th>
                 </tr>
               </thead>
@@ -284,11 +298,37 @@ function GestionAsignacion() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span className="badge badge-secondary">
-                          {asig.turno}
+                          {mostrarTurno(asig.turno ?? "")}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center', fontWeight: 500, color: 'var(--color-gray-700)' }}>
                         {asig.dia ?? "?"}
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-gray-900)' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          backgroundColor: 'var(--color-secondary)',
+                          color: 'var(--color-white)',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 600,
+                        }}>
+                          {materia?.codigo ?? "—"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--color-gray-700)' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          backgroundColor: '#7c3aed',
+                          color: 'var(--color-white)',
+                          borderRadius: 'var(--border-radius-sm)',
+                          padding: '0.25rem 0.5rem',
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 600,
+                        }}>
+                          {asig.comision ?? "—"}
+                        </span>
                       </td>
                       <td>
                         <div style={{
