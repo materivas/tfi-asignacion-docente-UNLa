@@ -47,87 +47,68 @@ const MateriaForm: React.FC<Props> = ({ planes, materiaInicial, onSubmit, onCanc
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
-      <h3 style={{ textAlign: "center" }}>
-        {materiaInicial ? "Editar Materia" : "Alta de Materia"}
-      </h3>
+    <form onSubmit={handleSubmit} className="modal-form">
+      <div className="field">
+        <label>Nombre</label>
+        <input
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          required
+          placeholder="Ej: Programación I"
+        />
+      </div>
 
-      <label>Nombre:</label>
-      <input
-        value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
-        required
-        style={inputEstilo}
-      />
+      <div className="field">
+        <label>Año en la carrera</label>
+        <input
+          type="number"
+          value={anio}
+          onChange={(e) => setAnio(Number(e.target.value))}
+          required
+          placeholder="Ej: 1"
+          min={1}
+          max={6}
+        />
+      </div>
 
-      <label>Año en la carrera:</label>
-<input
-  type="number"
-  value={anio}
-  onChange={(e) => setAnio(Number(e.target.value))}
-  required
-  style={inputEstilo}
-/>
+      <div className="field">
+        <label>Código</label>
+        <input
+          type="number"
+          value={codigo}
+          onChange={(e) => setCodigo(Number(e.target.value))}
+          placeholder="Ej: 25"
+        />
+      </div>
 
-      <label>Código:</label>
-      <input
-        type="number"
-        value={codigo}
-        onChange={(e) => setCodigo(Number(e.target.value))}
-        placeholder="Ej: 25"
-        style={inputEstilo}
-      />
-
-      <label>Plan académico:</label>
-      <select
-        value={planId}
-        onChange={(e) => setPlanId(Number(e.target.value))}
-        required
-        style={inputEstilo}
-      >
-        <option value="">Seleccione</option>
-        {planes.map((plan) => (
-          <option key={plan.id} value={plan.id}>
-            {plan.nombre}
-          </option>
-        ))}
-      </select>
-
-      <button type="submit" style={btnEstilo}>
-        {materiaInicial ? "Guardar cambios" : "Registrar"}
-      </button>
-
-      {materiaInicial && onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{ ...btnEstilo, backgroundColor: "#999", marginTop: "0.5rem" }}
+      <div className="field">
+        <label>Plan académico</label>
+        <select
+          value={planId}
+          onChange={(e) => setPlanId(Number(e.target.value))}
+          required
         >
-          Cancelar edición
+          <option value="">Seleccioná un plan…</option>
+          {planes.map((plan) => (
+            <option key={plan.id} value={plan.id}>
+              {plan.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-actions">
+        {materiaInicial && onCancel && (
+          <button type="button" onClick={onCancel} className="btn-cancel">
+            Cancelar
+          </button>
+        )}
+        <button type="submit" className="btn-submit">
+          {materiaInicial ? "Guardar cambios" : "Registrar"}
         </button>
-      )}
+      </div>
     </form>
   );
-};
-
-const inputEstilo: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.5rem",
-  marginBottom: "1rem",
-  borderRadius: "4px",
-  border: "1px solid #ccc"
-};
-
-const btnEstilo: React.CSSProperties = {
-  backgroundColor: "#7A1F1F",
-  color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  border: "none",
-  cursor: "pointer",
-  width: "100%"
 };
 
 export default MateriaForm;

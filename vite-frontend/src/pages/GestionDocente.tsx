@@ -5,8 +5,10 @@ import { listarDocentes, crearDocente, eliminarDocente, actualizarDocente, impor
 import { listarCategorias } from "../api/categoriaApi";
 import { descargarTemplateDocentes } from "../utils/excelTemplates";
 import type { Docente, Categoria } from "../types";
+import { useToast } from "../context/ToastContext";
 
 function GestionDocente() {
+  const { toast, confirm } = useToast();
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [categoriasMap, setCategoriasMap] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,7 @@ function GestionDocente() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<number | "">("")
   const [importando, setImportando] = useState(false);
-  const [resultadoImport, setResultadoImport] = useState<{ creados: number; ignorados: number; errores: string[] } | null>(null);;
+  const [resultadoImport, setResultadoImport] = useState<{ creados: number; ignorados: number; errores: string[] } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,7 +52,7 @@ function GestionDocente() {
     // Validar si ya existe un docente con el mismo DNI
     const docenteExistente = docentes.find(d => d.dni === docente.dni);
     if (docenteExistente) {
-      alert(`❌ Error: Ya existe un docente con el DNI ${docente.dni}`);
+      toast.error(`Ya existe un docente con el DNI ${docente.dni}`);
       return;
     }
 
@@ -58,23 +60,23 @@ function GestionDocente() {
       const nuevo = await crearDocente(docente);
       setDocentes((prev) => [...prev, nuevo]);
       setMostrarFormulario(false);
-      alert("✅ Docente registrado exitosamente");
+      toast.success("Docente registrado exitosamente");
     } catch (err) {
       console.error("❌ Error al crear docente:", err);
-      alert("❌ No se pudo registrar el docente");
+      toast.error("No se pudo registrar el docente");
     }
   };
 
   const handleEditar = async (docente: Docente) => {
     if (docente.id == null) {
-      alert("❌ No se puede editar un docente sin ID");
+      toast.error("No se puede editar un docente sin ID");
       return;
     }
 
     // Validar si ya existe otro docente con el mismo DNI
     const docenteExistente = docentes.find(d => d.dni === docente.dni && d.id !== docente.id);
     if (docenteExistente) {
-      alert(`❌ Error: Ya existe otro docente con el DNI ${docente.dni}`);
+      toast.error(`Ya existe otro docente con el DNI ${docente.dni}`);
       return;
     }
 
@@ -84,24 +86,29 @@ function GestionDocente() {
         prev.map((d) => (d.id === actualizado.id ? actualizado : d))
       );
       setDocenteEditando(null);
-      alert("✅ Docente actualizado exitosamente");
+      toast.success("Docente actualizado exitosamente");
     } catch (err) {
       console.error("❌ Error al editar docente:", err);
-      alert("❌ No se pudo actualizar el docente");
+      toast.error("No se pudo actualizar el docente");
     }
   };
 
   const handleEliminar = async (id: number) => {
-    const confirmar = window.confirm("¿Está seguro que desea eliminar este docente?");
+    const confirmar = await confirm({
+      title: "Eliminar docente",
+      message: "¿Está seguro que desea eliminar este docente? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarDocente(id);
       setDocentes((prev) => prev.filter((d) => d.id !== id));
-      alert("✅ Docente eliminado exitosamente");
+      toast.success("Docente eliminado exitosamente");
     } catch (err) {
       console.error("❌ Error al eliminar docente:", err);
-      alert("❌ No se pudo eliminar el docente");
+      toast.error("No se pudo eliminar el docente");
     }
   };
 
@@ -117,142 +124,52 @@ function GestionDocente() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-md)',
-          }}>
-            Gestión de Docentes
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Administre el registro de docentes y sus categorías académicas
-          </p>
+        <div className="page-header">
+          <h1>Gestión de Docentes</h1>
+          <p>Administre el registro de docentes y sus categorías académicas</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Buscar por nombre o DNI..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="form-input"
-                style={{ minWidth: '250px', flex: 1 }}
-              />
-              <select
-                value={filtroCategoria}
-                onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))}
-                className="form-select"
-                style={{ minWidth: '200px' }}
-              >
-                <option value="">Todas las categorías</option>
-                {Array.from(categoriasMap.entries()).map(([id, nombre]) => (
-                  <option key={id} value={id}>{nombre}</option>
-                ))}
-              </select>
-            </div>
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nuevo Docente
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
+            <input type="text" placeholder="Buscar por nombre o DNI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '250px', flex: 1 }} />
+            <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '200px' }}>
+              <option value="">Todas las categorías</option>
+              {Array.from(categoriasMap.entries()).map(([id, nombre]) => (
+                <option key={id} value={id}>{nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+            <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nuevo Docente
             </button>
-            <button
-              onClick={() => descargarTemplateDocentes(categoriasMap)}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#3b82f6',
-                color: 'var(--color-white)',
-                borderRadius: 'var(--border-radius-md)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: 'var(--font-size-sm)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                border: 'none',
-                transition: 'all 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-              title="Descargar template para importar docentes"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="12 7 12 19" /><polyline points="7 14 12 19 17 14" /></svg>
-              Descargar Template
+            <button onClick={() => descargarTemplateDocentes(categoriasMap)} className="btn btn-ghost" title="Descargar template para importar docentes">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="12 7 12 19"/><polyline points="7 14 12 19 17 14"/></svg>
+              Template
             </button>
-            <label
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: importando ? 'var(--color-gray-400)' : '#065f46',
-                color: 'var(--color-white)',
-                borderRadius: 'var(--border-radius-md)',
-                cursor: importando ? 'not-allowed' : 'pointer',
-                fontWeight: 600,
-                fontSize: 'var(--font-size-sm)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                opacity: importando ? 0.6 : 1,
-                transition: 'all 0.15s'
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-              {importando ? 'Importando…' : 'Importar Excel'}
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                style={{ display: 'none' }}
-                disabled={importando}
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setImportando(true);
-                  setResultadoImport(null);
-                  try {
-                    const res = await importarDocentesExcel(file);
-                    console.log('Respuesta del import:', res);
-                    setResultadoImport(res);
-                    // Recargar docentes
-                    const resDocentes = await listarDocentes();
-                    setDocentes(resDocentes);
-                  } catch (err) {
-                    console.error('Error al importar docentes:', err);
-                    alert('Error al importar el archivo Excel');
-                  } finally {
-                    setImportando(false);
-                    e.target.value = '';
-                  }
-                }}
-              />
+            <label className="btn btn-ghost" style={{ cursor: importando ? 'not-allowed' : 'pointer', opacity: importando ? 0.6 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              {importando ? 'Importando…' : 'Importar'}
+              <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importando} onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImportando(true);
+                setResultadoImport(null);
+                try {
+                  const res = await importarDocentesExcel(file);
+                  setResultadoImport(res);
+                  const resDocentes = await listarDocentes();
+                  setDocentes(resDocentes);
+                } catch (err) {
+                  console.error('Error al importar docentes:', err);
+                  toast.error('Error al importar el archivo Excel');
+                } finally {
+                  setImportando(false);
+                  e.target.value = '';
+                }
+              }} />
             </label>
           </div>
         </div>
@@ -390,40 +307,23 @@ function GestionDocente() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Docentes
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {docentes.length}
+            <div>
+              <div className="stat-value">{docentes.length}</div>
+              <div className="stat-label">Total Docentes</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {docentesFiltrados.length}
+            <div>
+              <div className="stat-value">{docentesFiltrados.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
         </div>

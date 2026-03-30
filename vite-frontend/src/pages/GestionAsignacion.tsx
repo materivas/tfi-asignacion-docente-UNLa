@@ -10,6 +10,7 @@ import {
 import { listarMaterias } from "../api/materiaApi";
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
 import type { Asignacion, Materia, Cuatrimestre } from "../types";
+import { useToast } from "../context/ToastContext";
 
 const normalizarTurno = (turno: string) =>
   turno
@@ -23,6 +24,7 @@ const mostrarTurno = (turno: string) =>
   normalizarTurno(turno) === "manana" ? "Mañana" : turno;
 
 function GestionAsignacion() {
+  const { toast, confirm } = useToast();
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [cuatrimestres, setCuatrimestres] = useState<Cuatrimestre[]>([]);
@@ -60,7 +62,7 @@ function GestionAsignacion() {
 
   const handleEditar = async (asignacion: Asignacion) => {
     if (asignacion.id == null) {
-      alert("La asignación no tiene ID asignado");
+      toast.error("La asignación no tiene ID asignado");
       return;
     }
 
@@ -70,24 +72,29 @@ function GestionAsignacion() {
         prev.map((a) => (a.id === actualizada.data.id ? actualizada.data : a))
       );
       setAsignacionEditando(null);
-      alert("Asignación actualizada exitosamente");
+      toast.success("Asignación actualizada exitosamente");
     } catch (err) {
       console.error("Error al editar asignación:", err);
-      alert("No se pudo actualizar la asignación");
+      toast.error("No se pudo actualizar la asignación");
     }
   };
 
   const handleEliminar = async (id: number) => {
-    const confirmar = window.confirm("¿Está seguro que desea eliminar esta asignación?");
+    const confirmar = await confirm({
+      title: "Eliminar asignación",
+      message: "¿Está seguro que desea eliminar esta asignación? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarAsignacion(id);
       setAsignaciones((prev) => prev.filter((a) => a.id !== id));
-      alert("Asignación eliminada exitosamente");
+      toast.success("Asignación eliminada exitosamente");
     } catch (err) {
       console.error("Error al eliminar asignación:", err);
-      alert("No se pudo eliminar la asignación");
+      toast.error("No se pudo eliminar la asignación");
     }
   };
 
@@ -96,10 +103,10 @@ function GestionAsignacion() {
       const res = await crearAsignacion(asignacion);
       setAsignaciones((prev) => [...prev, res.data]);
       setMostrarFormulario(false);
-      alert("Asignación registrada exitosamente");
+      toast.success("Asignación registrada exitosamente");
     } catch (err) {
       console.error("Error al crear asignación:", err);
-      alert("No se pudo registrar la asignación");
+      toast.error("No se pudo registrar la asignación");
     }
   };
 
@@ -128,68 +135,19 @@ function GestionAsignacion() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--spacing-md)',
-          }}>
-            Gestión de Asignaciones
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Administre asignaciones de materias por cuatrimestre, turno y horarios
-          </p>
+        <div className="page-header">
+          <h1>Gestión de Asignaciones</h1>
+          <p>Administre asignaciones de materias por cuatrimestre, turno y horarios</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Buscar por materia..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="form-input"
-                style={{ minWidth: '220px', flex: 1 }}
-              />
-              <select
-                value={filtroTurno}
-                onChange={(e) => setFiltroTurno(e.target.value)}
-                className="form-select"
-                style={{ minWidth: '150px' }}
-              >
-                <option value="">Todos los turnos</option>
-                {turnosDisponibles.map((turno) => (
-                  <option key={turno} value={turno}>{turno}</option>
-                ))}
-              </select>
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
+            <input type="text" placeholder="Buscar por materia..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '220px', flex: 1 }} />
+            <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)} className="form-select" style={{ minWidth: '150px' }}>
+              <option value="">Todos los turnos</option>
+              {turnosDisponibles.map((turno) => (<option key={turno} value={turno}>{turno}</option>))}
+            </select>
               <select
                 value={filtroDia}
                 onChange={(e) => setFiltroDia(e.target.value)}
@@ -213,13 +171,10 @@ function GestionAsignacion() {
                 ))}
               </select>
             </div>
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nueva Asignación
-            </button>
-          </div>
+          <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva Asignación
+          </button>
         </div>
 
         {/* Tabla de Asignaciones */}
@@ -361,55 +316,32 @@ function GestionAsignacion() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Asignaciones
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {asignaciones.length}
+            <div>
+              <div className="stat-value">{asignaciones.length}</div>
+              <div className="stat-label">Total Asignaciones</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {asignacionesFiltradas.length}
+            <div>
+              <div className="stat-value">{asignacionesFiltradas.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Materias Asignadas
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#ecfdf5', color: 'var(--color-success)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-success)' }}>
-              {new Set(asignaciones.map(a => a.materiaId)).size}
+            <div>
+              <div className="stat-value">{new Set(asignaciones.map(a => a.materiaId)).size}</div>
+              <div className="stat-label">Materias Asignadas</div>
             </div>
           </div>
         </div>

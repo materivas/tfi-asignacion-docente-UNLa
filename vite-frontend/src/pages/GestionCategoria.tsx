@@ -8,8 +8,10 @@ import {
   actualizarCategoria,
   eliminarCategoria
 } from "../api/categoriaApi";
+import { useToast } from "../context/ToastContext";
 
 function GestionCategoria() {
+  const { toast, confirm } = useToast();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,16 +43,16 @@ function GestionCategoria() {
       });
       setCategorias((prev) => [...prev, res.data]);
       setMostrarFormulario(false);
-      alert("Categoría registrada exitosamente");
+      toast.success("Categoría registrada exitosamente");
     } catch (err) {
       console.error("Error al crear categoría:", err);
-      alert("No se pudo registrar la categoría");
+      toast.error("No se pudo registrar la categoría");
     }
   };
 
   const handleEditar = async (categoria: Categoria) => {
     if (categoria.id == null) {
-      alert("No se puede editar una categoría sin ID");
+      toast.error("No se puede editar una categoría sin ID");
       return;
     }
 
@@ -58,29 +60,34 @@ function GestionCategoria() {
       const res = await actualizarCategoria(categoria.id, categoria);
       setCategorias((prev) => prev.map((c) => (c.id === res.data.id ? res.data : c)));
       setCategoriaEditando(null);
-      alert("Categoría actualizada exitosamente");
+      toast.success("Categoría actualizada exitosamente");
     } catch (err) {
       console.error("Error al editar categoría:", err);
-      alert("No se pudo actualizar la categoría");
+      toast.error("No se pudo actualizar la categoría");
     }
   };
 
   const handleEliminar = async (id?: number) => {
     if (id == null) {
-      alert("No se puede eliminar una categoría sin ID");
+      toast.error("No se puede eliminar una categoría sin ID");
       return;
     }
 
-    const confirmar = window.confirm("¿Está seguro que desea eliminar esta categoría?");
+    const confirmar = await confirm({
+      title: "Eliminar categoría",
+      message: "¿Está seguro que desea eliminar esta categoría? Esta acción no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+    });
     if (!confirmar) return;
 
     try {
       await eliminarCategoria(id);
       setCategorias((prev) => prev.filter((c) => c.id !== id));
-      alert("Categoría eliminada exitosamente");
+      toast.success("Categoría eliminada exitosamente");
     } catch (err) {
       console.error("Error al eliminar categoría:", err);
-      alert("No se pudo eliminar la categoría");
+      toast.error("No se pudo eliminar la categoría");
     }
   };
 
@@ -95,60 +102,18 @@ function GestionCategoria() {
     <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-xl)',
-          marginBottom: 'var(--spacing-xl)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <h1 style={{
-            fontSize: 'var(--font-size-3xl)',
-            color: 'var(--color-primary)',
-            margin: 0,
-            marginBottom: 'var(--spacing-sm)',
-          }}>
-            Categorías Docentes
-          </h1>
-          <p style={{
-            color: 'var(--color-gray-600)',
-            margin: 0,
-            fontSize: 'var(--font-size-base)',
-          }}>
-            Administre categorías académicas y carga horaria permitida
-          </p>
+        <div className="page-header">
+          <h1>Categorías Docentes</h1>
+          <p>Administre categorías académicas y carga horaria permitida</p>
         </div>
 
         {/* Controles y Filtros */}
-        <div style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--border-radius-lg)',
-          padding: 'var(--spacing-lg)',
-          marginBottom: 'var(--spacing-lg)',
-          boxShadow: 'var(--shadow-sm)',
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: 'var(--spacing-md)',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <input
-              type="text"
-              placeholder="Buscar categoría..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              className="form-input"
-              style={{ minWidth: '250px', flex: 1 }}
-            />
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="btn btn-primary"
-            >
-              + Nueva Categoría
-            </button>
-          </div>
+        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+          <input type="text" placeholder="Buscar categoría..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '250px', flex: 1 }} />
+          <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva Categoría
+          </button>
         </div>
 
         {/* Tabla */}
@@ -240,40 +205,23 @@ function GestionCategoria() {
         )}
 
         {/* Estadísticas */}
-        <div style={{
-          marginTop: 'var(--spacing-lg)',
-          display: 'flex',
-          gap: 'var(--spacing-md)',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Total Categorías
+        <div className="stat-grid">
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {categorias.length}
+            <div>
+              <div className="stat-value">{categorias.length}</div>
+              <div className="stat-label">Total Categorías</div>
             </div>
           </div>
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-md)',
-            padding: 'var(--spacing-md)',
-            boxShadow: 'var(--shadow-sm)',
-            flex: 1,
-            minWidth: '200px',
-          }}>
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', marginBottom: 'var(--spacing-xs)' }}>
-              Resultados Filtrados
+          <div className="stat-item">
+            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--color-secondary)' }}>
-              {categoriasFiltradas.length}
+            <div>
+              <div className="stat-value">{categoriasFiltradas.length}</div>
+              <div className="stat-label">Resultados Filtrados</div>
             </div>
           </div>
         </div>

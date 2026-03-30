@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Materia, ImportResultado } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api/materias';
+const BASE_URL = '/api/materias';
 
 export const listarMaterias = () => axios.get<Materia[]>(BASE_URL);
 

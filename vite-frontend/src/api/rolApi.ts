@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Rol } from "src/types";
 
-const BASE_URL = 'http://localhost:8080/api/roles';
+const BASE_URL = '/api/roles';
 
 export const listarRoles = async (): Promise<Rol[]> => {
   const res = await axios.get(BASE_URL);
