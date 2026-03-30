@@ -22,26 +22,32 @@ const AsignacionForm: React.FC<Props> = ({
   const [turno, setTurno] = useState<string>(AsignacionInicial?.turno ?? "");
   const [anio, setAnio] = useState<number | "">(AsignacionInicial?.anio ?? "");
   const [dia, setDia] = useState<string>(AsignacionInicial?.dia ?? "");
+  const [comision, setComision] = useState<string>(AsignacionInicial?.comision ?? "");
+  const [comisionEditada, setComisionEditada] = useState(false);
 
-  const materiaSel = materias?.find((m) => m.id === Number(materiaId));
   const abreviarTurno = (valorTurno: string) => {
     if (!valorTurno) return "";
-
-    const turnoNormalizado = valorTurno
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-
-    if (turnoNormalizado.includes("manana") || turnoNormalizado.includes("maniana")) return "TM";
-    if (turnoNormalizado.includes("tarde")) return "TT";
-    if (turnoNormalizado.includes("noche")) return "TN";
+    const t = valorTurno.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    if (t.includes("manana") || t.includes("maniana")) return "TM";
+    if (t.includes("tarde")) return "TT";
+    if (t.includes("noche")) return "TN";
     return "";
   };
 
-  const comisionPreview = materiaSel?.codigo && turno
-    ? `${materiaSel.codigo}-1 ${abreviarTurno(turno)}`
-    : "-";
+  const generarComision = (mId: number | "", t: string) => {
+    const mat = materias?.find((m) => m.id === Number(mId));
+    return mat?.codigo && t ? `${mat.codigo}-1 ${abreviarTurno(t)}` : "";
+  };
+
+  const handleMateriaChange = (val: number | "") => {
+    setMateriaID(val);
+    if (!comisionEditada) setComision(generarComision(val, turno));
+  };
+
+  const handleTurnoChange = (val: string) => {
+    setTurno(val);
+    if (!comisionEditada) setComision(generarComision(materiaId, val));
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,14 +63,16 @@ const AsignacionForm: React.FC<Props> = ({
           cuatrimestreId: Number(cuatrimestreId),
           turno,
           anio: Number(anio),
-          dia
+          dia,
+          comision: comision || undefined
         }
       : {
           materiaId: Number(materiaId),
           cuatrimestreId: Number(cuatrimestreId),
           turno,
           anio: Number(anio),
-          dia
+          dia,
+          comision: comision || undefined
         };
 
     onSubmit?.(nuevaAsignacion);
@@ -84,7 +92,7 @@ const AsignacionForm: React.FC<Props> = ({
         <label>Materia</label>
         <select
           value={materiaId}
-          onChange={(e) => setMateriaID(Number(e.target.value))}
+          onChange={(e) => handleMateriaChange(Number(e.target.value))}
           required
         >
           <option value="">Seleccioná una materia…</option>
@@ -116,7 +124,7 @@ const AsignacionForm: React.FC<Props> = ({
         <label>Turno</label>
         <select
           value={turno}
-          onChange={(e) => setTurno(e.target.value)}
+          onChange={(e) => handleTurnoChange(e.target.value)}
           required
         >
           <option value="">Seleccioná turno…</option>
@@ -127,10 +135,23 @@ const AsignacionForm: React.FC<Props> = ({
       </div>
 
       <div className="field">
-        <label>Comisión (generada automáticamente)</label>
-        <div className="comision-preview">
-          {comisionPreview}
-        </div>
+        <label>Comisión</label>
+        <input
+          type="text"
+          value={comision}
+          onChange={(e) => { setComision(e.target.value); setComisionEditada(true); }}
+          onFocus={() => setComisionEditada(true)}
+          placeholder={generarComision(materiaId, turno) || "Ej: 101-1 TM"}
+        />
+        {comisionEditada && (
+          <button
+            type="button"
+            className="btn-link"
+            onClick={() => { setComision(generarComision(materiaId, turno)); setComisionEditada(false); }}
+          >
+            Restaurar automática
+          </button>
+        )}
       </div>
 
       <div className="field">
