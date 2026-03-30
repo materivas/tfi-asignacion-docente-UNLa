@@ -498,6 +498,21 @@ tbody tr:hover {
   border-color: var(--color-gray-400);
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-link:hover {
+  color: var(--color-primary-dark);
+}
+
 /* ── Alerts ── */
 .alert {
   padding: var(--spacing-md) var(--spacing-lg);
