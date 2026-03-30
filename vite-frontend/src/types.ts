@@ -9,6 +9,7 @@ export interface Materia {
   nombre: string;
   planId: number;
   anio: number;
+  codigo?: number;
 }
 
 export interface Docente { 
@@ -43,6 +44,7 @@ export interface Asignacion {
   turno: string;
   anio: number;
   dia: string;
+  comision?: string;
 }
 
 export interface AsignacionDocente {

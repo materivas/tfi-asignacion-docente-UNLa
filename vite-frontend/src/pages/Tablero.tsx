@@ -10,14 +10,26 @@ import { listarRoles } from "../api/rolApi";
 import Modal from "src/components/Modal";
 import { useToast } from "../context/ToastContext";
 
+const normalizarTurno = (turno: string) =>
+  turno
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace("maniana", "manana");
+
 const diasSemana = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"];
 const diasCortos: Record<string, string> = {
   Lunes: "LUN", Martes: "MAR", Miercoles: "MIÉ", Jueves: "JUE", Viernes: "VIE", Sabado: "SÁB"
 };
-const turnos = ["Maniana", "Tarde", "Noche"];
+const turnos = ["Mañana", "Tarde", "Noche"];
 const turnoLabels: Record<string, string> = { Maniana: "Mañana", Tarde: "Tarde", Noche: "Noche" };
 const turnoColors: Record<string, string> = { Maniana: "#d97706", Tarde: "#ea580c", Noche: "#7c3aed" };
 const anios = [1, 2, 3, 4, 5];
+const turnosCanonicos = ["Mañana", "Tarde", "Noche"];
+const mostrarTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "Mañana" : turno;
+const iconoTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "☀️" : turnoIcons[turno];
+const colorTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "#fbbf24" : turnoColors[turno];
 
 interface Warning {
   id: string;
@@ -465,7 +477,7 @@ function Tablero() {
       .filter((a) => {
         if (filtroCuatrimestre !== "") { const nro = extraerNumeroCuatrimestre(a); if (nro == null || nro !== Number(filtroCuatrimestre)) return false; }
         if (filtroAnioAsignacion !== "" && a.anio !== filtroAnioAsignacion) return false;
-        if (filtroTurno && a.turno !== filtroTurno) return false;
+        if (filtroTurno && normalizarTurno(a.turno ?? "") !== normalizarTurno(filtroTurno)) return false;
         const materia = getMateria(a.materiaId);
         if (!materia || materia.anio !== anio) return false;
         if (filtroMateria && !materia.nombre.toLowerCase().includes(filtroMateria.toLowerCase())) return false;
@@ -477,7 +489,7 @@ function Tablero() {
           });
           if (!hasDocente) return false;
         }
-        return a.dia === dia && a.turno === turno;
+        return a.dia === dia && normalizarTurno(a.turno ?? "") === normalizarTurno(turno);
       })
       .sort((a, b) => (getMateria(a.materiaId)?.nombre ?? "").localeCompare(getMateria(b.materiaId)?.nombre ?? ""));
 
@@ -631,7 +643,7 @@ function Tablero() {
 
   const turnosVisibles = useMemo(() => {
     if (filtroTurno) return [filtroTurno];
-    return turnos;
+    return turnosCanonicos;
   }, [filtroTurno]);
 
   const errCount = useMemo(() => warnings.filter(w => w.type === 'error').length, [warnings]);
@@ -968,7 +980,7 @@ function Tablero() {
               <label>Turno</label>
               <select value={filtroTurno} onChange={(e) => setFiltroTurno(e.target.value)}>
                 <option value="">Todos</option>
-                {turnos.map((t) => <option key={t} value={t}>{turnoLabels[t]}</option>)}
+                {turnosCanonicos.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} className="filter-search" />

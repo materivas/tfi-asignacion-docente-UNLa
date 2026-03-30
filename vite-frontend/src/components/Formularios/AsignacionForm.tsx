@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import type { Asignacion, Materia, Cuatrimestre } from "../../types";
 
 interface Props {
-  materias: Pick<Materia, "id" | "nombre">[] | undefined;
+  materias: Pick<Materia, "id" | "nombre" | "codigo">[] | undefined;
   cuatrimestres: Pick<Cuatrimestre, "id" | "numeroCuatri">[] | undefined;
   AsignacionInicial?: Asignacion;
   onSubmit?: (asignacion: Asignacion) => void;
@@ -23,29 +23,49 @@ const AsignacionForm: React.FC<Props> = ({
   const [anio, setAnio] = useState<number | "">(AsignacionInicial?.anio ?? "");
   const [dia, setDia] = useState<string>(AsignacionInicial?.dia ?? "");
 
+  const materiaSel = materias?.find((m) => m.id === Number(materiaId));
+  const abreviarTurno = (valorTurno: string) => {
+    if (!valorTurno) return "";
+
+    const turnoNormalizado = valorTurno
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+    if (turnoNormalizado.includes("manana") || turnoNormalizado.includes("maniana")) return "TM";
+    if (turnoNormalizado.includes("tarde")) return "TT";
+    if (turnoNormalizado.includes("noche")) return "TN";
+    return "";
+  };
+
+  const comisionPreview = materiaSel?.codigo && turno
+    ? `${materiaSel.codigo}-1 ${abreviarTurno(turno)}`
+    : "-";
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!materiaId || !cuatrimestreId || turno === "" || anio === "" || dia === "") {
-      alert("Completá todos los campos.");
+      alert("Completa todos los campos.");
       return;
     }
 
-const nuevaAsignacion: Asignacion = AsignacionInicial?.id
-  ? {
-      id: AsignacionInicial.id,
-      materiaId: Number(materiaId),
-      cuatrimestreId: Number(cuatrimestreId),
-      turno,
-      anio: Number(anio),
-      dia
-    }
-  : {
-      materiaId: Number(materiaId),
-      cuatrimestreId: Number(cuatrimestreId),
-      turno,
-      anio: Number(anio),
-      dia
-    };
+    const nuevaAsignacion: Asignacion = AsignacionInicial?.id
+      ? {
+          id: AsignacionInicial.id,
+          materiaId: Number(materiaId),
+          cuatrimestreId: Number(cuatrimestreId),
+          turno,
+          anio: Number(anio),
+          dia
+        }
+      : {
+          materiaId: Number(materiaId),
+          cuatrimestreId: Number(cuatrimestreId),
+          turno,
+          anio: Number(anio),
+          dia
+        };
 
     onSubmit?.(nuevaAsignacion);
   };
@@ -104,6 +124,13 @@ const nuevaAsignacion: Asignacion = AsignacionInicial?.id
           <option value="Tarde">Tarde</option>
           <option value="Noche">Noche</option>
         </select>
+      </div>
+
+      <div className="field">
+        <label>Comisión (generada automáticamente)</label>
+        <div className="comision-preview">
+          {comisionPreview}
+        </div>
       </div>
 
       <div className="field">

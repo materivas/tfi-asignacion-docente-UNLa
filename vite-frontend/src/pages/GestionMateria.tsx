@@ -252,6 +252,7 @@ function GestionMateria() {
                   <th style={{ width: '50px' }}>#</th>
                   <th>Materia</th>
                   <th>Plan de Estudio</th>
+                  <th style={{ textAlign: 'center', width: '80px' }}>Código</th>
                   <th style={{ textAlign: 'center', width: '100px' }}>Año</th>
                   <th style={{ textAlign: 'center', width: '150px' }}>Acciones</th>
                 </tr>
@@ -274,6 +275,19 @@ function GestionMateria() {
                       <span style={{
                         display: 'inline-block',
                         backgroundColor: 'var(--color-secondary)',
+                        color: 'var(--color-white)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        padding: '0.25rem 0.5rem',
+                        fontSize: 'var(--font-size-sm)',
+                        fontWeight: 600,
+                      }}>
+                        {mat.codigo ?? "—"}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        backgroundColor: '#ec4899',
                         color: 'var(--color-white)',
                         borderRadius: 'var(--border-radius-sm)',
                         padding: '0.25rem 0.5rem',

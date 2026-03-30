@@ -19,7 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.*;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -69,6 +71,7 @@ public class AsignacionService {
             asignacion.setTurno(dto.getTurno());
             asignacion.setAnio(dto.getAnio());
             asignacion.setDia(dto.getDia());
+            asignacion.generarComision();
             return AsignacionDto.fromEntity(asignacionRepository.save(asignacion));
         }).orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
     }
@@ -87,21 +90,18 @@ public class AsignacionService {
         List<Asignacion> todasAsignaciones = asignacionRepository.findAll();
         List<AsignacionDocente> todasAsignacionesDocentes = asignacionDocenteRepository.findAll();
 
-        // Filtrar por año calendario si se especifica
         if (anioCalendario != null) {
             todasAsignaciones = todasAsignaciones.stream()
                     .filter(a -> anioCalendario.equals(a.getAnio()))
                     .collect(Collectors.toList());
         }
 
-        // Filtrar por cuatrimestre si se especifica
         if (cuatrimestreNum != null) {
             todasAsignaciones = todasAsignaciones.stream()
                     .filter(a -> a.getCuatrimestre() != null && cuatrimestreNum.equals(a.getCuatrimestre().getNumeroCuatri()))
                     .collect(Collectors.toList());
         }
 
-        // Mapa asignacionId -> lista de AsignacionDocente
         Map<Long, List<AsignacionDocente>> docentesPorAsignacion = new HashMap<>();
         for (AsignacionDocente ad : todasAsignacionesDocentes) {
             if (ad.getAsignacion() != null && ad.getAsignacion().getId() != null) {
@@ -111,38 +111,24 @@ public class AsignacionService {
             }
         }
 
-        // Labels para turnos y días - normalización robusta que soporta cualquier variante de encoding
-        // (ej: "Mañana", "Maniana", "MaÃ±ana", etc.)
         Map<String, String> turnoLabels = new HashMap<>();
-        turnoLabels.put("Maniana", "Mañana");
-        turnoLabels.put("Mañana", "Mañana");
-        turnoLabels.put("Ma\u00c3\u00b1ana", "Mañana"); // doble-encoding UTF-8
+        turnoLabels.put("Maniana", "Ma\u00f1ana");
+        turnoLabels.put("Manana", "Ma\u00f1ana");
+        turnoLabels.put("Ma\u00f1ana", "Ma\u00f1ana");
+        turnoLabels.put("Ma??ana", "Ma\u00f1ana");
+        turnoLabels.put("Ma\u00c3\u00b1ana", "Ma\u00f1ana");
         turnoLabels.put("Tarde", "Tarde");
         turnoLabels.put("Noche", "Noche");
 
-        Map<String, String> diaLabels = new HashMap<>();
-        diaLabels.put("Lunes", "Lunes");
-        diaLabels.put("Martes", "Martes");
-        diaLabels.put("Miercoles", "Mi\u00e9rcoles");
-        diaLabels.put("Mi\u00e9rcoles", "Mi\u00e9rcoles");
-        diaLabels.put("Jueves", "Jueves");
-        diaLabels.put("Viernes", "Viernes");
-        diaLabels.put("Sabado", "S\u00e1bado");
-        diaLabels.put("S\u00e1bado", "S\u00e1bado");
-
-        // Agrupar asignaciones por año de materia, ordenado
-        Map<Integer, List<Asignacion>> asignacionesPorAnioMateria = new TreeMap<>();
-        for (Asignacion a : todasAsignaciones) {
-            if (a.getMateria() != null && a.getMateria().getAnio() != null) {
-                asignacionesPorAnioMateria
-                        .computeIfAbsent(a.getMateria().getAnio(), k -> new ArrayList<>())
-                        .add(a);
-            }
-        }
+        List<Asignacion> asignacionesOrdenadas = new ArrayList<>(todasAsignaciones);
+        asignacionesOrdenadas.sort(
+                Comparator
+                        .comparing((Asignacion a) -> a.getMateria() != null && a.getMateria().getAnio() != null ? a.getMateria().getAnio() : Integer.MAX_VALUE)
+                        .thenComparing(a -> a.getComision() != null ? a.getComision() : "")
+                        .thenComparing(a -> a.getMateria() != null ? a.getMateria().getNombre() : "")
+        );
 
         try (Workbook workbook = new XSSFWorkbook()) {
-            // ── Estilos ──
-            // Estilo de encabezado
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -158,20 +144,6 @@ public class AsignacionService {
             headerStyle.setBorderLeft(BorderStyle.THIN);
             headerStyle.setBorderRight(BorderStyle.THIN);
 
-            // Estilo para la columna Año (centrado vertical y horizontal)
-            CellStyle anioStyle = workbook.createCellStyle();
-            Font anioFont = workbook.createFont();
-            anioFont.setBold(true);
-            anioFont.setFontHeightInPoints((short) 11);
-            anioStyle.setFont(anioFont);
-            anioStyle.setAlignment(HorizontalAlignment.CENTER);
-            anioStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            anioStyle.setBorderBottom(BorderStyle.THIN);
-            anioStyle.setBorderTop(BorderStyle.THIN);
-            anioStyle.setBorderLeft(BorderStyle.THIN);
-            anioStyle.setBorderRight(BorderStyle.THIN);
-
-            // Estilo para celdas de datos
             CellStyle cellStyle = workbook.createCellStyle();
             cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
             cellStyle.setWrapText(true);
@@ -181,7 +153,6 @@ public class AsignacionService {
             cellStyle.setBorderRight(BorderStyle.THIN);
             cellStyle.setAlignment(HorizontalAlignment.LEFT);
 
-            // Estilo de título
             CellStyle titleStyle = workbook.createCellStyle();
             Font titleFont = workbook.createFont();
             titleFont.setBold(true);
@@ -192,19 +163,17 @@ public class AsignacionService {
 
             Sheet sheet = workbook.createSheet("Calendario");
 
-            // Título
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
             String titulo = "Calendario de Asignaciones";
-            if (anioCalendario != null) titulo += " - Año " + anioCalendario;
+            if (anioCalendario != null) titulo += " - A\u00f1o " + anioCalendario;
             if (cuatrimestreNum != null) titulo += " - Cuatrimestre " + cuatrimestreNum;
             titleCell.setCellValue(titulo);
             titleCell.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
 
-            // Encabezados: Año | Materia | Profesor | Dia y Turno
             Row headerRow = sheet.createRow(2);
-            String[] headers = {"Año", "Materia", "Profesor", "Dia y Turno"};
+            String[] headers = {"Año", "Codigo", "Comision", "Asignatura", "Profesores", "Turnos"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -213,113 +182,71 @@ public class AsignacionService {
 
             int rowIndex = 3;
 
-            // Recorrer por cada año de materia agrupado
-            for (Map.Entry<Integer, List<Asignacion>> entry : asignacionesPorAnioMateria.entrySet()) {
-                int anioMateria = entry.getKey();
-                List<Asignacion> asignacionesAnio = entry.getValue();
+            for (Asignacion asig : asignacionesOrdenadas) {
+                Row row = sheet.createRow(rowIndex);
 
-                // Ordenar por nombre de materia
-                asignacionesAnio.sort(Comparator.comparing(a -> a.getMateria() != null ? a.getMateria().getNombre() : ""));
+                String anioMateria = asig.getMateria() != null && asig.getMateria().getAnio() != null
+                        ? String.valueOf(asig.getMateria().getAnio())
+                        : "";
+                Cell anioCell = row.createCell(0);
+                anioCell.setCellValue(anioMateria);
+                anioCell.setCellStyle(cellStyle);
 
-                int startRowForAnio = rowIndex;
+                String codigoMateria = resolverCodigoMateria(asig);
+                Cell codigoCell = row.createCell(1);
+                codigoCell.setCellValue(codigoMateria);
+                codigoCell.setCellStyle(cellStyle);
 
-                for (Asignacion asig : asignacionesAnio) {
-                    Row row = sheet.createRow(rowIndex);
+                Cell comisionCell = row.createCell(2);
+                comisionCell.setCellValue(resolverComision(asig));
+                comisionCell.setCellStyle(cellStyle);
 
-                    // Columna Materia
-                    String nombreMateria = asig.getMateria() != null ? asig.getMateria().getNombre() : "Sin materia";
-                    Cell materiaCell = row.createCell(1);
-                    materiaCell.setCellValue(nombreMateria);
-                    materiaCell.setCellStyle(cellStyle);
+                String nombreMateria = asig.getMateria() != null ? asig.getMateria().getNombre() : "Sin materia";
+                Cell materiaCell = row.createCell(3);
+                materiaCell.setCellValue(nombreMateria);
+                materiaCell.setCellStyle(cellStyle);
 
-                    // Columna Profesor: docentes separados por " / "
-                    List<AsignacionDocente> docentes = docentesPorAsignacion
-                            .getOrDefault(asig.getId(), Collections.emptyList());
+                List<AsignacionDocente> docentes = docentesPorAsignacion
+                        .getOrDefault(asig.getId(), Collections.emptyList());
 
-                    String profesores;
-                    if (docentes.isEmpty()) {
-                        profesores = "Sin docente asignado";
-                    } else {
+                String profesores;
+                if (docentes.isEmpty()) {
+                    profesores = "Sin docente asignado";
+                } else {
+                    profesores = docentes.stream()
+                            .filter(ad -> ad.getConfirmado() != null && ad.getConfirmado())
+                            .map(ad -> ad.getDocente() != null ? ad.getDocente().getNombre() : "?")
+                            .collect(Collectors.joining(" / "));
+                    if (profesores.isEmpty()) {
                         profesores = docentes.stream()
-                                .filter(ad -> ad.getConfirmado() != null && ad.getConfirmado())
-                                .map(ad -> ad.getDocente() != null ? ad.getDocente().getNombre() : "?")
+                                .map(ad -> {
+                                    String nombre = ad.getDocente() != null ? ad.getDocente().getNombre() : "?";
+                                    return nombre + " (?)";
+                                })
                                 .collect(Collectors.joining(" / "));
-                        if (profesores.isEmpty()) {
-                            // Si nadie está confirmado, mostrar todos con indicador
-                            profesores = docentes.stream()
-                                    .map(ad -> {
-                                        String nombre = ad.getDocente() != null ? ad.getDocente().getNombre() : "?";
-                                        return nombre + " (?)";
-                                    })
-                                    .collect(Collectors.joining(" / "));
-                        }
-                    }
-                    Cell profCell = row.createCell(2);
-                    profCell.setCellValue(profesores);
-                    profCell.setCellStyle(cellStyle);
-
-                    // Columna Dia y Turno
-                    String dia = asig.getDia() != null ? diaLabels.getOrDefault(asig.getDia(), asig.getDia()) : "";
-                    String turnoRaw = asig.getTurno() != null ? asig.getTurno() : "";
-                    String turno = turnoLabels.getOrDefault(turnoRaw, null);
-                    if (turno == null && !turnoRaw.isEmpty()) {
-                        // Fallback: detectar por prefijo para manejar encoding corrupto
-                        String lower = turnoRaw.toLowerCase();
-                        if (lower.startsWith("ma")) {
-                            turno = "Mañana";
-                        } else if (lower.startsWith("ta")) {
-                            turno = "Tarde";
-                        } else if (lower.startsWith("no")) {
-                            turno = "Noche";
-                        } else {
-                            turno = turnoRaw;
-                        }
-                    } else if (turno == null) {
-                        turno = "";
-                    }
-                    String diaYTurno = "";
-                    if (!dia.isEmpty() && !turno.isEmpty()) {
-                        diaYTurno = dia + " turno " + turno;
-                    } else if (!dia.isEmpty()) {
-                        diaYTurno = dia;
-                    } else if (!turno.isEmpty()) {
-                        diaYTurno = "Turno " + turno;
-                    }
-                    Cell diaCell = row.createCell(3);
-                    diaCell.setCellValue(diaYTurno);
-                    diaCell.setCellStyle(cellStyle);
-
-                    rowIndex++;
-                }
-
-                // Columna Año: escribir en la primera fila del grupo y mergear si hay más de una
-                int endRowForAnio = rowIndex - 1;
-                Row firstRow = sheet.getRow(startRowForAnio);
-                Cell anioCell = firstRow.createCell(0);
-                anioCell.setCellValue(anioMateria + "° año");
-                anioCell.setCellStyle(anioStyle);
-
-                if (endRowForAnio > startRowForAnio) {
-                    sheet.addMergedRegion(new CellRangeAddress(startRowForAnio, endRowForAnio, 0, 0));
-                    // Aplicar estilo a las celdas mergeadas vacías para que tengan bordes
-                    for (int r = startRowForAnio + 1; r <= endRowForAnio; r++) {
-                        Row mergedRow = sheet.getRow(r);
-                        if (mergedRow != null) {
-                            Cell emptyAnioCell = mergedRow.createCell(0);
-                            emptyAnioCell.setCellStyle(anioStyle);
-                        }
                     }
                 }
+                Cell profCell = row.createCell(4);
+                profCell.setCellValue(profesores);
+                profCell.setCellStyle(cellStyle);
+
+                String turnoRaw = asig.getTurno() != null ? asig.getTurno() : "";
+                String turno = turnoLabels.getOrDefault(turnoRaw, turnoRaw);
+                Cell turnoCell = row.createCell(5);
+                turnoCell.setCellValue(turno);
+                turnoCell.setCellStyle(cellStyle);
+
+                rowIndex++;
             }
 
-            // Ajustar anchos de columnas
-            sheet.setColumnWidth(0, 4000);  // Año
-            sheet.setColumnWidth(1, 8000);  // Materia
-            sheet.setColumnWidth(2, 10000); // Profesor
-            sheet.setColumnWidth(3, 8000);  // Dia y Turno
+            sheet.setColumnWidth(0, 3500);
+            sheet.setColumnWidth(1, 5000);
+            sheet.setColumnWidth(2, 5000);
+            sheet.setColumnWidth(3, 9000);
+            sheet.setColumnWidth(4, 10000);
+            sheet.setColumnWidth(5, 5000);
 
-            // Si no hay datos, mostrar mensaje
-            if (asignacionesPorAnioMateria.isEmpty()) {
+            if (asignacionesOrdenadas.isEmpty()) {
                 Row row = sheet.createRow(3);
                 row.createCell(0).setCellValue("No se encontraron asignaciones para los filtros seleccionados.");
             }
@@ -328,6 +255,48 @@ public class AsignacionService {
             workbook.write(baos);
             return baos;
         }
+    }
+
+    private String resolverCodigoMateria(Asignacion asignacion) {
+        if (asignacion.getMateria() != null && asignacion.getMateria().getCodigo() != null) {
+            return String.valueOf(asignacion.getMateria().getCodigo());
+        }
+
+        String comision = asignacion.getComision();
+        if (comision != null && comision.contains("-")) {
+            return comision.substring(0, comision.indexOf('-')).trim();
+        }
+
+        return "";
+    }
+
+    private String resolverComision(Asignacion asignacion) {
+        if (asignacion.getComision() != null && !asignacion.getComision().isBlank()) {
+            return asignacion.getComision();
+        }
+
+        if (asignacion.getMateria() != null && asignacion.getMateria().getCodigo() != null) {
+            String turnoAbreviado = abreviarTurnoExport(asignacion.getTurno());
+            if (!turnoAbreviado.isEmpty()) {
+                return asignacion.getMateria().getCodigo() + "-1 " + turnoAbreviado;
+            }
+        }
+
+        return "";
+    }
+
+    private String abreviarTurnoExport(String turno) {
+        if (turno == null) return "";
+
+        String turnoNormalizado = Normalizer.normalize(turno, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim();
+
+        if (turnoNormalizado.contains("manana") || turnoNormalizado.contains("maniana")) return "TM";
+        if (turnoNormalizado.contains("tarde")) return "TT";
+        if (turnoNormalizado.contains("noche")) return "TN";
+        return "";
     }
 
     public Map<String, Object> importarAsignacionesDesdeExcel(MultipartFile archivo) throws IOException {
