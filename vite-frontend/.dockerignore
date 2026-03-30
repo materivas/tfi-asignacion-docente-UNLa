@@ -1,4 +1,6 @@
-.react-router
-build
 node_modules
-README.md
+dist
+build
+.react-router
+.git
+*.md

@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Docente, ImportResultado } from "../types"; 
 
-const BASE_URL = "http://localhost:8080/api/docentes";
+const BASE_URL = "/api/docentes";
 
 export const crearDocente = async (docente: Docente): Promise<Docente> => {
   const response = await axios.post(BASE_URL, docente, {

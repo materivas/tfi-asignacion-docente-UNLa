@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Asignacion } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api/asignaciones';
+const BASE_URL = '/api/asignaciones';
 
 export const listarAsignaciones = () => axios.get<Asignacion[]>(BASE_URL);
 

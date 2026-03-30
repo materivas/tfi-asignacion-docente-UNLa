@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Plan } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api/planes';
+const BASE_URL = '/api/planes';
 
 export const listarPlanes = () => axios.get<Plan[]>(BASE_URL);
 export const obtenerPlan = (id: number) => axios.get<Plan>(`${BASE_URL}/${id}`);

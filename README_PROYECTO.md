@@ -87,7 +87,40 @@ Ver documentación completa en [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)
 
 ## 🛠️ Instalación y Ejecución
 
-### Backend
+### 🐳 Con Docker (recomendado)
+
+Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado.
+
+```bash
+# Levantar todo (base de datos + backend + frontend)
+docker compose up --build
+
+# Levantar en segundo plano
+docker compose up --build -d
+
+# Parar
+docker compose down
+
+# Parar y borrar datos de la base
+docker compose down -v
+```
+
+| Servicio | URL |
+|----------|-----|
+| Frontend | http://localhost |
+| Backend API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| PostgreSQL | `localhost:5433` (usuario: `postgres`, contraseña: `root`) |
+
+### 💻 Sin Docker (desarrollo local)
+
+#### Requisitos previos
+- Java 17
+- Maven
+- Node.js 20+
+- PostgreSQL 16 corriendo en `localhost:5432` con base `asignacionDocente`
+
+#### Backend
 
 ```bash
 cd backend
@@ -97,7 +130,7 @@ mvn spring-boot:run
 
 Backend disponible en: `http://localhost:8080`
 
-### Frontend
+#### Frontend
 
 ```bash
 cd vite-frontend
@@ -106,6 +139,23 @@ npm run dev
 ```
 
 Frontend disponible en: `http://localhost:5173`
+
+---
+
+## 🚀 Deploy en un servidor
+
+```bash
+# 1. Clonar el repositorio en el servidor
+git clone <url-del-repo>
+cd gestion-docentes-UNLa-1
+
+# 2. Levantar
+docker compose up --build -d
+
+# 3. Para actualizar después de un git push
+git pull
+docker compose up --build -d
+```
 
 ---
 
@@ -179,8 +229,59 @@ Universidad Nacional de Lanús
 
 ## 📄 Documentación
 
-- [Sistema de Diseño](./DESIGN_SYSTEM.md)
+- [Sistema de Diseño](./vite-frontend/DESIGN_SYSTEM.md)
 - Swagger API: `http://localhost:8080/swagger-ui.html`
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+gestion-docentes-UNLa/
+├── docker-compose.yml          # Orquestación de servicios
+├── backend/                    # Spring Boot API
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/com/gestion/backend/
+│       │   ├── controller/     # Endpoints REST
+│       │   ├── model/          # Entidades JPA
+│       │   ├── repository/     # Repositorios Spring Data
+│       │   ├── service/        # Lógica de negocio
+│       │   ├── dto/            # Objetos de transferencia
+│       │   └── config/         # Configuración (CORS, etc.)
+│       └── resources/
+│           ├── application.properties
+│           └── data.sql        # Datos iniciales
+└── vite-frontend/              # React + Vite SPA
+    ├── Dockerfile
+    ├── nginx.conf              # Proxy reverso para producción
+    ├── package.json
+    └── src/
+        ├── api/                # Llamadas al backend
+        ├── components/         # Componentes reutilizables
+        ├── pages/              # Páginas de la aplicación
+        ├── context/            # Contextos React (Auth, Toast)
+        └── utils/              # Utilidades
+```
+
+---
+
+## 🗄️ Acceso a la Base de Datos
+
+### Desde terminal
+```bash
+docker compose exec db psql -U postgres -d asignacionDocente
+```
+
+### Desde un cliente gráfico (DBeaver, pgAdmin, etc.)
+| Dato | Valor |
+|------|-------|
+| Host | `localhost` |
+| Puerto | `5433` |
+| Base de datos | `asignacionDocente` |
+| Usuario | `postgres` |
+| Contraseña | `root` |
 
 ---
 
