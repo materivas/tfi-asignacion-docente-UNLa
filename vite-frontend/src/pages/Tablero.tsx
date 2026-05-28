@@ -31,6 +31,18 @@ const mostrarTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "M
 const iconoTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "☀️" : turnoIcons[turno];
 const colorTurno = (turno: string) => normalizarTurno(turno) === "manana" ? "#fbbf24" : turnoColors[turno];
 
+const obtenerMensajeError = (error: any, fallback: string) => {
+  const data = error?.response?.data;
+
+  if (error?.mensajeUsuario) return error.mensajeUsuario;
+  if (typeof data === "string" && data.trim()) return data;
+  if (data?.mensaje) return data.mensaje;
+  if (data?.message) return data.message;
+  if (error?.message && !error.message.includes("Request failed with status code")) return error.message;
+
+  return fallback;
+};
+
 interface Warning {
   id: string;
   type: 'error' | 'warning' | 'info';
@@ -203,14 +215,20 @@ function Tablero() {
       const max = Number(categoria.maxMaterias);
 
       if (carga > max + 1) {
-        warns.push({ id: `error-${docenteId}`, type: 'error', docenteId, docenteNombre: docente.nombre,
-          message: `${docente.nombre} excede el límite en ${carga - max} materia(s)`, carga, maxCarga: max });
+        warns.push({
+          id: `error-${docenteId}`, type: 'error', docenteId, docenteNombre: docente.nombre,
+          message: `${docente.nombre} excede el límite en ${carga - max} materia(s)`, carga, maxCarga: max
+        });
       } else if (carga === max + 1 || carga === max) {
-        warns.push({ id: `ok-${docenteId}`, type: 'info', docenteId, docenteNombre: docente.nombre,
-          message: `${docente.nombre} está en el límite correcto`, carga, maxCarga: max });
+        warns.push({
+          id: `ok-${docenteId}`, type: 'info', docenteId, docenteNombre: docente.nombre,
+          message: `${docente.nombre} está en el límite correcto`, carga, maxCarga: max
+        });
       } else if (carga < max) {
-        warns.push({ id: `warning-${docenteId}`, type: 'warning', docenteId, docenteNombre: docente.nombre,
-          message: `${docente.nombre} está por debajo del límite en ${max - carga} materia(s)`, carga, maxCarga: max });
+        warns.push({
+          id: `warning-${docenteId}`, type: 'warning', docenteId, docenteNombre: docente.nombre,
+          message: `${docente.nombre} está por debajo del límite en ${max - carga} materia(s)`, carga, maxCarga: max
+        });
       }
     });
 
@@ -310,16 +328,29 @@ function Tablero() {
     };
 
     try {
-      if (editandoAsignacionDocenteId) {
+      if (editandoAsignacionDocenteId != null) {
         await actualizarAsignacionDocente(editandoAsignacionDocenteId, payloadEditar);
+        toast.success("Asignación modificada con éxito.");
       } else {
         await crearAsignacionDocente(payloadCrear as any);
+        toast.success("Docente asignado con éxito.");
       }
+
+      // Si el backend da el OK, consolidamos los datos y cerramos el flujo
       await fetchData();
       cerrarModal();
+
     } catch (err: any) {
       console.error("Error al guardar asignación_docente:", err?.response?.status, err?.response?.data ?? err);
-      toast.error(`Error al guardar: ${err?.response?.data?.message ?? err?.message}`);
+
+      // Captura el mensaje dinámico que viene desde el backend (enviado por el interceptor de la API)
+      const mensajeError = obtenerMensajeError(
+        err,
+        "No se puede guardar la asignacion porque el docente ya tiene una materia en ese horario."
+      );
+
+      // Muestra el Toast visual con el motivo exacto del solapamiento
+      toast.error(mensajeError);
     }
   };
 
@@ -371,7 +402,10 @@ function Tablero() {
       setDraggedItem(null);
     } catch (err: any) {
       console.error("Error al mover asignación:", err);
-      toast.error(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(obtenerMensajeError(
+        err,
+        "No se puede mover la asignacion porque el docente ya tiene una materia en ese horario."
+      ));
       setDraggedItem(null);
     }
   };
@@ -399,7 +433,7 @@ function Tablero() {
   const handleDropAsignacion = async (e: React.DragEvent, toDia: string, toTurno: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!draggedAsignacion) {
       setDraggedAsignacion(null);
       return;
@@ -434,7 +468,10 @@ function Tablero() {
       setDraggedAsignacion(null);
     } catch (err: any) {
       console.error("Error al mover materia:", err);
-      toast.error(`Error al mover: ${err?.response?.data?.message ?? err?.message}`);
+      toast.error(obtenerMensajeError(
+        err,
+        "No se puede mover la materia porque uno de sus docentes ya tiene una materia en ese horario."
+      ));
       setDraggedAsignacion(null);
     }
   };
@@ -729,7 +766,7 @@ function Tablero() {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px', lineHeight: 1.2, color: '#ffffff' }}>Alertas y Advertencias</h3>
@@ -737,14 +774,14 @@ function Tablero() {
               </div>
             </div>
             <button onClick={() => setShowWarnings(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', flexShrink: 0 }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
           {/* Resumen en mini-stats */}
           <div style={{ display: 'flex', gap: 8 }}>
             <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: errCount > 0 ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={errCount > 0 ? "#fca5a5" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={errCount > 0 ? "#fca5a5" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
               </div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{warnings.length}</div>
@@ -753,7 +790,7 @@ function Tablero() {
             </div>
             <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: conflictos.length > 0 ? 'rgba(236,72,153,0.25)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={conflictos.length > 0 ? "#f9a8d4" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={conflictos.length > 0 ? "#f9a8d4" : "rgba(255,255,255,0.6)"} strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               </div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>{conflictos.length}</div>
@@ -785,7 +822,7 @@ function Tablero() {
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#fdf2f8', borderRadius: 8, border: '1px solid #fce7f3' }}>
                 <div style={{ width: 24, height: 24, borderRadius: 6, background: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#9d174d', textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>Superposiciones horarias</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#ec4899', background: '#fce7f3', borderRadius: 10, padding: '2px 8px' }}>{conflictos.length}</span>
@@ -793,7 +830,7 @@ function Tablero() {
               {conflictos.map((c, idx) => (
                 <div key={idx} className="conflict-item">
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ec4899', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, letterSpacing: '-0.01em' }}>{c.docenteNombre}</div>
@@ -816,7 +853,7 @@ function Tablero() {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                 <div style={{ width: 24, height: 24, borderRadius: 6, background: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>Carga docente</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', background: '#e2e8f0', borderRadius: 10, padding: '2px 8px' }}>{warningsFiltered.length}</span>
@@ -825,11 +862,11 @@ function Tablero() {
                 <div key={w.id} className={`warning-item ${w.type}`}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff', background: w.type === 'error' ? '#dc2626' : w.type === 'warning' ? '#f59e0b' : '#10b981' }}>
                     {w.type === 'error' ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="2" x2="12" y2="14"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="2" x2="12" y2="14" /><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" /></svg>
                     ) : w.type === 'warning' ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="7 13 12 18 17 13"/><line x1="12" y1="6" x2="12" y2="18"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="7 13 12 18 17 13" /><line x1="12" y1="6" x2="12" y2="18" /></svg>
                     ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -845,7 +882,7 @@ function Tablero() {
           ) : warningFilter !== 'all' ? (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
               <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
               </div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 4, letterSpacing: '-0.02em' }}>Sin alertas en esta categoría</div>
               <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, fontWeight: 400 }}>No se encontraron incidencias con el filtro seleccionado.</div>
@@ -856,7 +893,7 @@ function Tablero() {
           {warnings.length === 0 && conflictos.length === 0 && (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
               <div style={{ width: 64, height: 64, borderRadius: 18, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '1px solid #a7f3d0' }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
               </div>
               <div style={{ fontSize: 17, fontWeight: 700, color: '#10b981', marginBottom: 6, letterSpacing: '-0.02em' }}>Todo en orden</div>
               <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, maxWidth: 240, margin: '0 auto', fontWeight: 400 }}>Todas las cargas docentes están dentro de los límites establecidos.</div>
@@ -881,7 +918,7 @@ function Tablero() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
             </div>
             <div>
               <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--color-primary)', margin: 0, letterSpacing: '-0.5px', lineHeight: 1.2 }}>Calendario Docente</h1>
@@ -911,7 +948,7 @@ function Tablero() {
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           <div className="t-stat-card">
             <div className="t-stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
             </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.docentesActivos}</div>
@@ -920,7 +957,7 @@ function Tablero() {
           </div>
           <div className="t-stat-card">
             <div className="t-stat-icon" style={{ background: '#ecfdf5', color: '#16a34a' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
             </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.materiasActivas}</div>
@@ -929,7 +966,7 @@ function Tablero() {
           </div>
           <div className="t-stat-card">
             <div className="t-stat-icon" style={{ background: '#faf5ff', color: '#9333ea' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
             </div>
             <div>
               <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-gray-800)', lineHeight: 1 }}>{stats.totalAsignaciones}</div>
@@ -939,7 +976,7 @@ function Tablero() {
           {stats.sinDocente > 0 && (
             <div className="t-stat-card" style={{ borderColor: '#fecaca' }}>
               <div className="t-stat-icon" style={{ background: '#fef2f2', color: '#dc2626' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
               </div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{stats.sinDocente}</div>
@@ -986,7 +1023,7 @@ function Tablero() {
             <input type="text" placeholder="Buscar materia..." value={filtroMateria} onChange={(e) => setFiltroMateria(e.target.value)} className="filter-search" />
             <input type="text" placeholder="Buscar docente..." value={filtroDocente} onChange={(e) => setFiltroDocente(e.target.value)} className="filter-search" />
             <button onClick={resetFiltros} className="btn btn-ghost" style={{ height: 38, fontSize: 12 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               Limpiar
             </button>
           </div>
@@ -1000,7 +1037,7 @@ function Tablero() {
           </div>
         ) : turnosVisibles.length === 0 ? (
           <div className="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-gray-300)" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/></svg>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-gray-300)" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="14" x2="8" y2="14.01" /><line x1="12" y1="14" x2="12" y2="14.01" /><line x1="16" y1="14" x2="16" y2="14.01" /></svg>
             <div style={{ fontSize: 16, color: '#64748b', fontWeight: 600 }}>No hay asignaciones para {selectedAnio}° Año con los filtros seleccionados</div>
             <button onClick={resetFiltros} className="btn btn-primary" style={{ marginTop: 8 }}>Limpiar filtros</button>
           </div>
@@ -1019,9 +1056,9 @@ function Tablero() {
                 <>
                   <div key={`label-${turno}`} className="cal-turno-label">
                     <div className="cal-turno-icon" style={{ background: turnoColors[turno] + '18', color: turnoColors[turno] }}>
-                      {turno === 'Maniana' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>}
-                      {turno === 'Tarde' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 18a5 5 0 0 0-10 0"/><line x1="12" y1="9" x2="12" y2="2"/><line x1="4.22" y1="10.22" x2="5.64" y2="11.64"/><line x1="1" y1="18" x2="3" y2="18"/><line x1="21" y1="18" x2="23" y2="18"/><line x1="18.36" y1="11.64" x2="19.78" y2="10.22"/></svg>}
-                      {turno === 'Noche' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>}
+                      {turno === 'Maniana' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>}
+                      {turno === 'Tarde' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 18a5 5 0 0 0-10 0" /><line x1="12" y1="9" x2="12" y2="2" /><line x1="4.22" y1="10.22" x2="5.64" y2="11.64" /><line x1="1" y1="18" x2="3" y2="18" /><line x1="21" y1="18" x2="23" y2="18" /><line x1="18.36" y1="11.64" x2="19.78" y2="10.22" /></svg>}
+                      {turno === 'Noche' && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>}
                     </div>
                     <span style={{ color: turnoColors[turno], fontWeight: 800, fontSize: 12 }}>{turnoLabels[turno] ?? turno}</span>
                   </div>
@@ -1063,7 +1100,7 @@ function Tablero() {
                                     onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.background = 'transparent'; }}
                                     title="Eliminar asignación"
                                   >
-                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5"/></svg>
+                                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5" /></svg>
                                   </button>
                                 </div>
                                 {docentes.length === 0 ? (
@@ -1085,10 +1122,10 @@ function Tablero() {
                                           </div>
                                           <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                                             <button onClick={(e) => { e.stopPropagation(); setSelectedAsignacionId(d.asignacionId); setSelectedDocenteId(String(d.docenteId)); setSelectedRolId(d.rolId ?? ""); setEditandoAsignacionDocenteId(d.id!); setShowModal(true); }} style={{ width: 22, height: 22, padding: 0, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Editar">
-                                              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0 1 14 4.667l-9 9-3.667 1 1-3.667 9-9Z" stroke="#64748b" strokeWidth="1.5"/></svg>
+                                              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M11.333 2A1.886 1.886 0 0 1 14 4.667l-9 9-3.667 1 1-3.667 9-9Z" stroke="#64748b" strokeWidth="1.5" /></svg>
                                             </button>
                                             <button onClick={(e) => { e.stopPropagation(); borrarAsignacionDocente(d.id!); }} style={{ width: 22, height: 22, padding: 0, background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Eliminar">
-                                              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5"/></svg>
+                                              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 0 1 1.334-1.334h2.666a1.333 1.333 0 0 1 1.334 1.334V4m2 0v9.333a1.333 1.333 0 0 1-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334V4h9.334Z" stroke="#dc2626" strokeWidth="1.5" /></svg>
                                             </button>
                                           </div>
                                         </div>
@@ -1137,18 +1174,18 @@ function Tablero() {
       {showAddAsignacionModal && (
         <Modal title="Nueva Asignación" onClose={() => setShowAddAsignacionModal(false)}>
           <div className="modal-form">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <div style={{ padding: '8px 14px', background: 'var(--color-primary-50)', borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              {addAsignacionDia}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div style={{ padding: '8px 14px', background: 'var(--color-primary-50)', borderRadius: 8, fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                {addAsignacionDia}
+              </div>
+              <div style={{ padding: '8px 14px', background: turnoColors[addAsignacionTurno] + '15', borderRadius: 8, fontSize: 13, fontWeight: 700, color: turnoColors[addAsignacionTurno], display: 'flex', alignItems: 'center', gap: 6 }}>
+                {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
+              </div>
+              <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
+                {selectedAnio}° Año
+              </div>
             </div>
-            <div style={{ padding: '8px 14px', background: turnoColors[addAsignacionTurno] + '15', borderRadius: 8, fontSize: 13, fontWeight: 700, color: turnoColors[addAsignacionTurno], display: 'flex', alignItems: 'center', gap: 6 }}>
-              {turnoLabels[addAsignacionTurno] ?? addAsignacionTurno}
-            </div>
-            <div style={{ padding: '8px 14px', background: '#f1f5f9', borderRadius: 8, fontSize: 13, fontWeight: 700, color: '#475569' }}>
-              {selectedAnio}° Año
-            </div>
-          </div>
             <div className="field">
               <label>Materia</label>
               <select value={addAsignacionMateriaId} onChange={(e) => setAddAsignacionMateriaId(e.target.value === "" ? "" : Number(e.target.value))}>
@@ -1159,7 +1196,7 @@ function Tablero() {
               </select>
               {materiasParaAgregar.length === 0 && (
                 <div style={{ marginTop: 6, fontSize: 12, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                   No hay materias registradas para {selectedAnio}° Año
                 </div>
               )}

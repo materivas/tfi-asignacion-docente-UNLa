@@ -1,6 +1,7 @@
 package com.gestion.backend.service;
 
 import com.gestion.backend.dto.AsignacionDto;
+import com.gestion.backend.exception.ConflictoHorarioException;
 import com.gestion.backend.model.Asignacion;
 import com.gestion.backend.model.AsignacionDocente;
 import com.gestion.backend.model.Materia;
@@ -66,6 +67,7 @@ public class AsignacionService {
         Cuatrimestre cuatrimestre = cuatrimestreRepository.findById(dto.getCuatrimestreId())
             .orElseThrow(() -> new RuntimeException("Cuatrimestre no encontrado"));
         return asignacionRepository.findById(id).map(asignacion -> {
+            validarConflictosAlMoverAsignacion(id, dto.getAnio(), dto.getDia(), dto.getTurno());
             asignacion.setMateria(materia);
             asignacion.setCuatrimestre(cuatrimestre);
             asignacion.setTurno(dto.getTurno());
@@ -297,6 +299,69 @@ public class AsignacionService {
         if (turnoNormalizado.contains("tarde")) return "TT";
         if (turnoNormalizado.contains("noche")) return "TN";
         return "";
+    }
+
+    private void validarConflictosAlMoverAsignacion(Long asignacionId, Integer anioNuevo, String diaNuevo, String turnoNuevo) {
+        List<AsignacionDocente> docentesDeAsignacion = asignacionDocenteRepository.findByAsignacionId(asignacionId).stream()
+                .filter(ad -> Boolean.TRUE.equals(ad.getConfirmado()))
+                .toList();
+
+        if (docentesDeAsignacion.isEmpty()) {
+            return;
+        }
+
+        for (AsignacionDocente docenteAsignado : docentesDeAsignacion) {
+            if (docenteAsignado.getDocente() == null) {
+                continue;
+            }
+            Long docenteId = docenteAsignado.getDocente().getId();
+
+            for (AsignacionDocente existente : asignacionDocenteRepository.findAll()) {
+                if (!Boolean.TRUE.equals(existente.getConfirmado())) {
+                    continue;
+                }
+                if (existente.getAsignacion() == null || existente.getDocente() == null) {
+                    continue;
+                }
+                if (Objects.equals(existente.getAsignacion().getId(), asignacionId)) {
+                    continue;
+                }
+                if (!Objects.equals(existente.getDocente().getId(), docenteId)) {
+                    continue;
+                }
+
+                Asignacion asignacionExistente = existente.getAsignacion();
+                if (mismoHorario(anioNuevo, diaNuevo, turnoNuevo, asignacionExistente)) {
+                    throw new ConflictoHorarioException(
+                            "No se puede mover la materia: " + existente.getDocente().getNombre()
+                                    + " ya tiene una materia en ese horario ("
+                                    + textoHorario(asignacionExistente) + ").");
+                }
+            }
+        }
+    }
+
+    private boolean mismoHorario(Integer anio, String dia, String turno, Asignacion asignacion) {
+        return Objects.equals(anio, asignacion.getAnio())
+                && normalizar(dia).equals(normalizar(asignacion.getDia()))
+                && normalizar(turno).equals(normalizar(asignacion.getTurno()));
+    }
+
+    private String normalizar(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return Normalizer.normalize(texto, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim()
+                .replace("maniana", "manana");
+    }
+
+    private String textoHorario(Asignacion asignacion) {
+        String dia = asignacion.getDia() != null ? asignacion.getDia() : "dia sin definir";
+        String turno = asignacion.getTurno() != null ? asignacion.getTurno() : "turno sin definir";
+        return dia + " - " + turno;
     }
 
     public Map<String, Object> importarAsignacionesDesdeExcel(MultipartFile archivo) throws IOException {

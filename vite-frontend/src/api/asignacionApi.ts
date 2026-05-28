@@ -3,6 +3,23 @@ import type { Asignacion } from '../types';
 
 const BASE_URL = '/api/asignaciones';
 
+const extraerMensajeError = (error: any, fallback: string) => {
+  const data = error?.response?.data;
+
+  if (typeof data === "string" && data.trim()) return data;
+  if (data?.mensaje) return data.mensaje;
+  if (data?.message) return data.message;
+
+  return fallback;
+};
+
+const crearErrorApi = (mensaje: string, errorOriginal: any) =>
+  Object.assign(new Error(mensaje), {
+    mensajeUsuario: mensaje,
+    response: errorOriginal?.response,
+    originalError: errorOriginal,
+  });
+
 export const listarAsignaciones = () => axios.get<Asignacion[]>(BASE_URL);
 
 export const obtenerAsignacion = (id: number) =>
@@ -11,8 +28,17 @@ export const obtenerAsignacion = (id: number) =>
 export const crearAsignacion = (asignacion: Asignacion) =>
   axios.post<Asignacion>(BASE_URL, asignacion, { withCredentials: true });
 
-export const actualizarAsignacion = (id: number, asignacion: Asignacion) =>
-  axios.put<Asignacion>(`${BASE_URL}/${id}`, asignacion, { withCredentials: true });
+export const actualizarAsignacion = async (id: number, asignacion: Asignacion) => {
+  try {
+    return await axios.put<Asignacion>(`${BASE_URL}/${id}`, asignacion, { withCredentials: true });
+  } catch (error: any) {
+    if (error.response?.status === 409) {
+      const mensaje = extraerMensajeError(error, "No se puede mover la asignacion porque ya existe un conflicto de horarios.");
+      throw crearErrorApi(mensaje, error);
+    }
+    throw crearErrorApi("Error interno del servidor al procesar la asignacion.", error);
+  }
+};
 
 export const eliminarAsignacion = (id: number) =>
   axios.delete(`${BASE_URL}/${id}`, { withCredentials: true });
