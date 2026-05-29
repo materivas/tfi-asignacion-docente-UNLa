@@ -2,6 +2,7 @@ package com.gestion.backend.service;
 
 import com.gestion.backend.dto.AsignacionDocenteDto;
 import com.gestion.backend.exception.ConflictoHorarioException;
+import com.gestion.backend.exception.LimiteCargaDocenteException;
 import com.gestion.backend.model.AsignacionDocente;
 import com.gestion.backend.model.Asignacion;
 import com.gestion.backend.model.Docente;
@@ -58,6 +59,7 @@ public class AsignacionDocenteService {
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         validarConflictoHorario(null, asignacion, docente, dto.getConfirmado());
+        validarLimiteCargaDocente(null, asignacion, docente, dto.getConfirmado());
         var asignacionDocente = AsignacionDocenteDto.toEntity(dto, asignacion, docente, rol);
         return AsignacionDocenteDto.fromEntity(asignacionDocenteRepository.save(asignacionDocente));
     }
@@ -72,6 +74,7 @@ public class AsignacionDocenteService {
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         return asignacionDocenteRepository.findById(id).map(asignacionDocente -> {
             validarConflictoHorario(id, asignacion, docente, dto.getConfirmado());
+            validarLimiteCargaDocente(id, asignacion, docente, dto.getConfirmado());
             asignacionDocente.setAsignacion(asignacion);
             asignacionDocente.setDocente(docente);
             asignacionDocente.setRol(rol);
@@ -239,6 +242,34 @@ public class AsignacionDocenteService {
                                 + ": ya tiene una materia en ese horario ("
                                 + textoHorario(asignacionExistente) + ").");
             }
+        }
+    }
+
+    private void validarLimiteCargaDocente(Long asignacionDocenteIdActual, Asignacion asignacionNueva, Docente docente,
+            Boolean confirmadoNuevo) {
+        if (!Boolean.TRUE.equals(confirmadoNuevo)) {
+            return;
+        }
+        if (docente.getCategoria() == null || docente.getCategoria().getMaxMaterias() == null) {
+            return;
+        }
+
+        int maxMaterias = docente.getCategoria().getMaxMaterias();
+        long cargaActual = asignacionDocenteRepository.findAll().stream()
+                .filter(existente -> asignacionDocenteIdActual == null
+                        || !asignacionDocenteIdActual.equals(existente.getId()))
+                .filter(existente -> Boolean.TRUE.equals(existente.getConfirmado()))
+                .filter(existente -> existente.getDocente() != null && existente.getAsignacion() != null)
+                .filter(existente -> docente.getId().equals(existente.getDocente().getId()))
+                .filter(existente -> Objects.equals(asignacionNueva.getAnio(), existente.getAsignacion().getAnio()))
+                .count();
+
+        if (cargaActual >= maxMaterias) {
+            String anioTexto = asignacionNueva.getAnio() != null ? " en " + asignacionNueva.getAnio() : "";
+            throw new LimiteCargaDocenteException(
+                    "No se puede asignar a " + docente.getNombre()
+                            + ": ya alcanzo el maximo de " + maxMaterias
+                            + " materia(s)" + anioTexto + ".");
         }
     }
 

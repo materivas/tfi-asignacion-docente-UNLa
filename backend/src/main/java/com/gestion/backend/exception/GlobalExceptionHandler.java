@@ -19,6 +19,15 @@ public class GlobalExceptionHandler {
                         "mensaje", ex.getMessage()));
     }
 
+    @ExceptionHandler(LimiteCargaDocenteException.class)
+    public ResponseEntity<Map<String, String>> handleLimiteCargaDocente(LimiteCargaDocenteException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "error", "LIMITE_CARGA_DOCENTE",
+                        "mensaje", ex.getMessage()));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
         return ResponseEntity
