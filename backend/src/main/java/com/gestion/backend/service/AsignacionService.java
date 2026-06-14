@@ -172,10 +172,10 @@ public class AsignacionService {
             if (cuatrimestreNum != null) titulo += " - Cuatrimestre " + cuatrimestreNum;
             titleCell.setCellValue(titulo);
             titleCell.setCellStyle(titleStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 6));
 
             Row headerRow = sheet.createRow(2);
-            String[] headers = {"Año", "Codigo", "Comision", "Asignatura", "Profesores", "Turnos"};
+            String[] headers = {"Año", "Codigo", "Comision", "Asignatura", "Profesores", "Día", "Turnos"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -232,9 +232,14 @@ public class AsignacionService {
                 profCell.setCellValue(profesores);
                 profCell.setCellStyle(cellStyle);
 
+                String diaRaw = asig.getDia() != null ? asig.getDia() : "";
+                Cell diaCell = row.createCell(5);
+                diaCell.setCellValue(diaRaw);
+                diaCell.setCellStyle(cellStyle);
+
                 String turnoRaw = asig.getTurno() != null ? asig.getTurno() : "";
                 String turno = turnoLabels.getOrDefault(turnoRaw, turnoRaw);
-                Cell turnoCell = row.createCell(5);
+                Cell turnoCell = row.createCell(6);
                 turnoCell.setCellValue(turno);
                 turnoCell.setCellStyle(cellStyle);
 
@@ -246,7 +251,8 @@ public class AsignacionService {
             sheet.setColumnWidth(2, 5000);
             sheet.setColumnWidth(3, 9000);
             sheet.setColumnWidth(4, 10000);
-            sheet.setColumnWidth(5, 5000);
+            sheet.setColumnWidth(5, 4500);
+            sheet.setColumnWidth(6, 5000);
 
             if (asignacionesOrdenadas.isEmpty()) {
                 Row row = sheet.createRow(3);

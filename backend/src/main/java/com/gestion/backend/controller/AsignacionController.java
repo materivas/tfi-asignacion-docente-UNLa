@@ -54,7 +54,14 @@ public class AsignacionController {
             ByteArrayOutputStream baos = asignacionService.exportarCalendarioExcel(anio, cuatrimestre);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            String filename = "calendario_docentes" + (anio != null ? "_" + anio : "") + ".xlsx";
+
+            // Nombre mejorado con timestamp
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            String timestamp = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm").format(now);
+            String filename = "grilla_docentes" + (anio != null ? "_" + anio : "")
+                    + (cuatrimestre != null ? "_C" + cuatrimestre : "")
+                    + "_" + timestamp + ".xlsx";
+
             headers.setContentDispositionFormData("attachment", filename);
             return ResponseEntity.ok().headers(headers).body(baos.toByteArray());
         } catch (Exception e) {

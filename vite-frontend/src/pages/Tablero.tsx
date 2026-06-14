@@ -698,10 +698,11 @@ function Tablero() {
         filtroAnioAsignacion,
         exportCuatrimestre
       );
+      toast.success("Grilla exportada exitosamente");
       setShowExportModal(false);
     } catch (err) {
       console.error("Error al exportar Excel:", err);
-      toast.error("Error al exportar el calendario a Excel");
+      toast.error("Error al exportar la grilla. Por favor intenta de nuevo.");
     } finally {
       setExporting(false);
     }
