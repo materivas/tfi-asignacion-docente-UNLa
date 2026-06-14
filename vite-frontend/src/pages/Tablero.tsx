@@ -103,6 +103,8 @@ function Tablero() {
     docenteId: number;
     docenteNombre: string;
     rolId: number;
+    horasAsignadas: number;
+    confirmado: boolean;
     fromAsignacionId: number;
   } | null>(null);
 
@@ -366,9 +368,10 @@ function Tablero() {
     return "#f59e0b";
   };
 
-  const handleDragStart = (e: React.DragEvent, asignacionDocenteId: number, docenteId: number, docenteNombre: string, rolId: number, fromAsignacionId: number) => {
+  const handleDragStart = (e: React.DragEvent, asignacionDocenteId: number, docenteId: number, docenteNombre: string, rolId: number, horasAsignadas: number, confirmado: boolean, fromAsignacionId: number) => {
+    e.stopPropagation();
     e.dataTransfer.effectAllowed = "move";
-    setDraggedItem({ asignacionDocenteId, docenteId, docenteNombre, rolId, fromAsignacionId });
+    setDraggedItem({ asignacionDocenteId, docenteId, docenteNombre, rolId, horasAsignadas, confirmado, fromAsignacionId });
     if (e.currentTarget instanceof HTMLElement) e.currentTarget.style.opacity = '0.5';
   };
 
@@ -389,14 +392,14 @@ function Tablero() {
       return;
     }
     try {
-      await eliminarAsignacionDocente(draggedItem.asignacionDocenteId);
-      await crearAsignacionDocente({
+      await actualizarAsignacionDocente(draggedItem.asignacionDocenteId, {
+        id: draggedItem.asignacionDocenteId,
         asignacionId: targetAsignacionId,
         docenteId: draggedItem.docenteId,
         docenteNombre: draggedItem.docenteNombre,
         rolId: draggedItem.rolId,
-        horasAsignadas: 1,
-        confirmado: true
+        horasAsignadas: draggedItem.horasAsignadas,
+        confirmado: draggedItem.confirmado
       } as any);
       await fetchData();
       setDraggedItem(null);
@@ -1115,7 +1118,7 @@ function Tablero() {
                                       const color = getColorPorCarga(d.docenteId, d.rolId);
                                       const carga = calcularCargaDocente(d.docenteId);
                                       return (
-                                        <div key={d.id} className="docente-chip" draggable onDragStart={(e) => handleDragStart(e, d.id!, d.docenteId, nombreReal, d.rolId ?? 0, asignacion.id!)} onDragEnd={handleDragEnd}>
+                                        <div key={d.id} className="docente-chip" draggable onDragStart={(e) => handleDragStart(e, d.id!, d.docenteId, nombreReal, d.rolId ?? 0, d.horasAsignadas ?? 1, d.confirmado ?? true, asignacion.id!)} onDragEnd={handleDragEnd}>
                                           <div className="color-indicator" style={{ background: color }} />
                                           <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 700, fontSize: 11, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreReal}</div>
