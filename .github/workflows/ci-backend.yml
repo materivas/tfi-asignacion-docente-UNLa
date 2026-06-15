@@ -1,6 +1,6 @@
 name: Backend CI Pipeline
 
-# 1er Criterio: Ejecución automática ante cada Pull Request hacia 'main'
+# 1er Criterio: Ejecución automática ante cada Pull Request hacia 'main' y 'dev'
 on:
   pull_request:
     branches: [ "main", "dev" ]
@@ -28,4 +28,7 @@ jobs:
 
       # 2do Criterio: Compilar el proyecto y ejecutar tests unitarios
       - name: Compilar y ejecutar Tests
+        env:
+          MAIL_USERNAME: correo_falso@unla.edu.ar
+          MAIL_PASSWORD: password_falsa
         run: mvn clean test
