@@ -10,6 +10,22 @@ jobs:
     name: Build y Test Spring Boot
     runs-on: ubuntu-latest
 
+    # Levantamos un PostgreSQL descartable en la nube para los tests
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: asignacionDocente
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     # Le indicamos que todos los comandos se ejecuten dentro de la carpeta backend
     defaults:
       run:
@@ -24,11 +40,14 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven # Optimiza los tiempos guardando las dependencias en caché
+          cache: maven
 
       # 2do Criterio: Compilar el proyecto y ejecutar tests unitarios
       - name: Compilar y ejecutar Tests
         env:
           MAIL_USERNAME: correo_falso@unla.edu.ar
           MAIL_PASSWORD: password_falsa
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/asignacionDocente
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: root
         run: mvn clean test
