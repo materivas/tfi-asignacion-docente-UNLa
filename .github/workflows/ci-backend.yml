@@ -1,0 +1,31 @@
+name: Backend CI Pipeline
+
+# 1er Criterio: Ejecución automática ante cada Pull Request hacia 'main'
+on:
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  build:
+    name: Build y Test Spring Boot
+    runs-on: ubuntu-latest
+
+    # Le indicamos que todos los comandos se ejecuten dentro de la carpeta backend
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven # Optimiza los tiempos guardando las dependencias en caché
+
+      # 2do Criterio: Compilar el proyecto y ejecutar tests unitarios
+      - name: Compilar y ejecutar Tests
+        run: mvn clean test
