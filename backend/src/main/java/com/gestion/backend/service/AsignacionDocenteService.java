@@ -42,6 +42,9 @@ public class AsignacionDocenteService {
     @Autowired
     private RolRepository rolRepository;
 
+    @Autowired
+    private EmailService emailService;
+
     public List<AsignacionDocenteDto> listarTodos() {
         return asignacionDocenteRepository.findAll().stream().map(AsignacionDocenteDto::fromEntity).toList();
     }
@@ -61,7 +64,13 @@ public class AsignacionDocenteService {
         validarConflictoHorario(null, asignacion, docente, dto.getConfirmado());
         validarLimiteCargaDocente(null, asignacion, docente, dto.getConfirmado());
         var asignacionDocente = AsignacionDocenteDto.toEntity(dto, asignacion, docente, rol);
-        return AsignacionDocenteDto.fromEntity(asignacionDocenteRepository.save(asignacionDocente));
+        // --- INICIO LÓGICA DE CORREO ---
+        AsignacionDocente guardado = asignacionDocenteRepository.save(asignacionDocente);
+        if (Boolean.TRUE.equals(guardado.getConfirmado())) {
+            emailService.enviarConfirmacionAsignacion(guardado);
+        }
+        return AsignacionDocenteDto.fromEntity(guardado);
+        // --- FIN LÓGICA DE CORREO ---
     }
 
     @Transactional
@@ -80,7 +89,15 @@ public class AsignacionDocenteService {
             asignacionDocente.setRol(rol);
             asignacionDocente.setHorasAsignadas(dto.getHorasAsignadas());
             asignacionDocente.setConfirmado(dto.getConfirmado());
-            return AsignacionDocenteDto.fromEntity(asignacionDocenteRepository.save(asignacionDocente));
+
+            // --- INICIO LÓGICA DE CORREO ---
+            AsignacionDocente guardado = asignacionDocenteRepository.save(asignacionDocente);
+            if (Boolean.TRUE.equals(guardado.getConfirmado())) {
+                emailService.enviarConfirmacionAsignacion(guardado);
+            }
+            return AsignacionDocenteDto.fromEntity(guardado);
+            // --- FIN LÓGICA DE CORREO ---
+
         }).orElseThrow(() -> new RuntimeException("AsignacionDocente no encontrada"));
     }
 
@@ -182,6 +199,13 @@ public class AsignacionDocenteService {
             }
             if (!nuevasAsignacionesDocente.isEmpty()) {
                 asignacionDocenteRepository.saveAll(nuevasAsignacionesDocente);
+
+                // Enviar correos de confirmación para las asignaciones confirmadas
+                for (AsignacionDocente asignacionDocente : nuevasAsignacionesDocente) {
+                    if (Boolean.TRUE.equals(asignacionDocente.getConfirmado())) {
+                        emailService.enviarConfirmacionAsignacion(asignacionDocente);
+                    }
+                }
             }
         }
 

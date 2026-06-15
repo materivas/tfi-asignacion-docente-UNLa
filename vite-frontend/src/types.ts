@@ -15,7 +15,8 @@ export interface Materia {
 export interface Docente { 
   id?: number; 
   nombre: string; 
-  dni: string; 
+  dni: string;
+  email?: string;
   categoriaId: number; 
 }
 

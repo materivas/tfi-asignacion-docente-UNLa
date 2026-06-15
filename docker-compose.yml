@@ -25,6 +25,8 @@ services:
       dockerfile: Dockerfile
     container_name: gestion-docentes-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/asignacionDocente
       SPRING_DATASOURCE_USERNAME: postgres

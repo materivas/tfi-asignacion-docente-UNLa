@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import type { Docente, Categoria } from "../../types";
 import { listarCategorias } from "../../api/categoriaApi";
@@ -12,6 +12,7 @@ interface Props {
 const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) => {
   const [nombre, setNombre] = useState(docenteInicial?.nombre ?? "");
   const [dni, setDni] = useState(docenteInicial?.dni ?? "");
+  const [email, setEmail] = useState(docenteInicial?.email ?? "");
   const [categoriaId, setCategoriaId] = useState<number | "">(docenteInicial?.categoriaId ?? "");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
     const docente: Docente = {
       nombre,
       dni,
+      email, // <-- Se envía el email al backend
       categoriaId: Number(categoriaId),
       ...(docenteInicial?.id != null && { id: docenteInicial.id })
     };
@@ -49,6 +51,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
       await onSubmit(docente);
       setNombre("");
       setDni("");
+      setEmail(""); // <-- Limpiar el campo
       setCategoriaId("");
     }
   };
@@ -76,6 +79,18 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
           placeholder="Ej: 30123456"
         />
       </div>
+
+      {/* NUEVO CAMPO VISUAL DEL EMAIL */}
+      <div className="field">
+        <label>Email (Opcional)</label>
+        <input
+            type="email"
+            value={email}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            placeholder="Ej: correo@unla.edu.ar"
+        />
+      </div>
+      {/* FIN DEL NUEVO CAMPO */}
 
       <div className="field">
         <label>Categoría</label>
