@@ -1,11 +1,9 @@
 import axios from "axios";
-import type { Docente } from "../types"; 
+import type { Docente, ImportResultado } from "../types"; 
 
-const BASE_URL = "http://localhost:8080/api/docentes";
+const BASE_URL = "/api/docentes";
 
 export const crearDocente = async (docente: Docente): Promise<Docente> => {
-  console.log("Payload enviado:", docente);
-
   const response = await axios.post(BASE_URL, docente, {
     withCredentials: true
   });
@@ -28,6 +26,17 @@ export const actualizarDocente = async (id: number, docente: Docente): Promise<D
   const response = await axios.put(`${BASE_URL}/${id}`, docente, {
     withCredentials: true
   });
+  return response.data;
+};
+
+export const importarDocentesExcel = async (archivo: File): Promise<ImportResultado> => {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  const response = await axios.post<ImportResultado>(
+    `${BASE_URL}/importar-excel`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true }
+  );
   return response.data;
 };
 

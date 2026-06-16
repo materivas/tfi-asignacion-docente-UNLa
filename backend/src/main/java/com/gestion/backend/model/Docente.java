@@ -26,6 +26,9 @@ public class Docente {
     @Column(nullable = false, unique = true)
     private String dni;
 
+    @Column(nullable = true, unique = true)
+    private String email;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;

@@ -67,8 +67,12 @@ public class DocenteService {
 
     public Map<String, Object> importarDocentesDesdeExcel(MultipartFile archivo) throws IOException {
         List<String> errores = new ArrayList<>();
+        List<String> filasIgnoradas = new ArrayList<>();
         int creados = 0;
         int ignorados = 0;
+
+        // Categorías predefinidas válidas
+        Set<String> categoriasValidas = new HashSet<>(Arrays.asList("Exclusiva", "Semiexclusiva", "Simple"));
 
         // Cache categorías en memoria para evitar consultas repetidas
         Map<String, Categoria> categoriasPorNombre = new HashMap<>();
@@ -94,19 +98,37 @@ public class DocenteService {
                     String nombre = obtenerTexto(fila.getCell(0));
                     String dni = obtenerTexto(fila.getCell(1));
                     String nombreCategoria = obtenerTexto(fila.getCell(2));
-                    if (nombre.isEmpty() || dni.isEmpty() || nombreCategoria.isEmpty()) {
-                        errores.add("Fila " + (i + 1) + ": campos incompletos");
+                    
+                    // Ignorar filas completamente vacías
+                    if (nombre.isEmpty() && dni.isEmpty() && nombreCategoria.isEmpty()) {
                         continue;
                     }
-                    if (dnisExistentes.contains(dni)) {
+                    
+                    // Ignorar filas con datos parciales (sin reportar error)
+                    if (nombre.isEmpty() || dni.isEmpty() || nombreCategoria.isEmpty()) {
+                        filasIgnoradas.add("Fila " + (i + 1) + ": datos incompletos");
                         ignorados++;
                         continue;
                     }
-                    Categoria categoria = categoriasPorNombre.get(nombreCategoria.trim().toLowerCase());
-                    if (categoria == null) {
-                        errores.add("Fila " + (i + 1) + ": Categoría no encontrada: " + nombreCategoria);
+                    
+                    // Validar que la categoría sea una de las 3 válidas
+                    if (!categoriasValidas.contains(nombreCategoria)) {
+                        errores.add("Fila " + (i + 1) + ": Categoría inválida '" + nombreCategoria + "'. Debe ser: Exclusiva, Semiexclusiva o Simple");
                         continue;
                     }
+                    
+                    if (dnisExistentes.contains(dni)) {
+                        filasIgnoradas.add("Fila " + (i + 1) + ": DNI " + dni + " ya existe");
+                        ignorados++;
+                        continue;
+                    }
+                    
+                    Categoria categoria = categoriasPorNombre.get(nombreCategoria.trim().toLowerCase());
+                    if (categoria == null) {
+                        errores.add("Fila " + (i + 1) + ": Error interno - Categoría " + nombreCategoria + " no encontrada en el sistema");
+                        continue;
+                    }
+                    
                     Docente nuevo = new Docente();
                     nuevo.setNombre(nombre);
                     nuevo.setDni(dni);
@@ -126,6 +148,7 @@ public class DocenteService {
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("creados", creados);
         resultado.put("ignorados", ignorados);
+        resultado.put("filasIgnoradas", filasIgnoradas);
         resultado.put("errores", errores);
         return resultado;
     }

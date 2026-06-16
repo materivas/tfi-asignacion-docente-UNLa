@@ -3,9 +3,12 @@ package com.gestion.backend.controller;
 import com.gestion.backend.dto.AsignacionDto;
 import com.gestion.backend.service.AsignacionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 @RestController
@@ -41,6 +44,29 @@ public class AsignacionController {
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         asignacionService.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/exportar-excel")
+    public ResponseEntity<byte[]> exportarCalendarioExcel(
+            @RequestParam(value = "anio", required = false) Integer anio,
+            @RequestParam(value = "cuatrimestre", required = false) Integer cuatrimestre) {
+        try {
+            ByteArrayOutputStream baos = asignacionService.exportarCalendarioExcel(anio, cuatrimestre);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+
+            // Nombre mejorado con timestamp
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            String timestamp = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm").format(now);
+            String filename = "grilla_docentes" + (anio != null ? "_" + anio : "")
+                    + (cuatrimestre != null ? "_C" + cuatrimestre : "")
+                    + "_" + timestamp + ".xlsx";
+
+            headers.setContentDispositionFormData("attachment", filename);
+            return ResponseEntity.ok().headers(headers).body(baos.toByteArray());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @PostMapping("/importar-excel")

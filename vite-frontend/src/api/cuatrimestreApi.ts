@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Cuatrimestre } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api/cuatrimestres';
+const BASE_URL = '/api/cuatrimestres';
 
 export const listarCuatrimestres = () => axios.get<Cuatrimestre[]>(BASE_URL);
 

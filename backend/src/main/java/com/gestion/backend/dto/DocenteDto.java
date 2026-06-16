@@ -7,14 +7,16 @@ public class DocenteDto {
     private Long id;
     private String nombre;
     private String dni;
+    private String email;
     private Long categoriaId;
 
     public DocenteDto() {}
 
-    public DocenteDto(Long id, String nombre, String dni, Long categoriaId) {
+    public DocenteDto(Long id, String nombre, String dni, String email, Long categoriaId) {
         this.id = id;
         this.nombre = nombre;
         this.dni = dni;
+        this.email = email;
         this.categoriaId = categoriaId;
     }
 
@@ -23,6 +25,7 @@ public class DocenteDto {
             docente.getId(),
             docente.getNombre(),
             docente.getDni(),
+                docente.getEmail(),
             docente.getCategoria() != null ? docente.getCategoria().getId() : null
         );
     }
@@ -32,6 +35,7 @@ public class DocenteDto {
         docente.setId(dto.getId());
         docente.setNombre(dto.getNombre());
         docente.setDni(dto.getDni());
+        docente.setEmail(dto.getEmail());
         docente.setCategoria(categoria);
         return docente;
     }
@@ -52,17 +56,17 @@ public class DocenteDto {
         this.nombre = nombre;
     }
 
-    public String getDni() {
-        return dni;
-    }
+    public String getDni() {return dni;}
+
+    public String getEmail() { return email;}
+
+    public void setEmail(String email) { this.email = email;}
 
     public void setDni(String dni) {
         this.dni = dni;
     }
 
-    public Long getCategoriaId() {
-        return categoriaId;
-    }
+    public Long getCategoriaId() { return categoriaId;}
 
     public void setCategoriaId(Long categoriaId) {
         this.categoriaId = categoriaId;

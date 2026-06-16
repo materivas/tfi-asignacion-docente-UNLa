@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Categoria } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api/Categorias';
+const BASE_URL = '/api/Categorias';
 
 export const listarCategorias = () => axios.get<Categoria[]>(BASE_URL);
 

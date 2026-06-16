@@ -9,12 +9,14 @@ export interface Materia {
   nombre: string;
   planId: number;
   anio: number;
+  codigo?: number;
 }
 
 export interface Docente { 
   id?: number; 
   nombre: string; 
-  dni: string; 
+  dni: string;
+  email?: string;
   categoriaId: number; 
 }
 
@@ -23,20 +25,28 @@ export interface Cuatrimestre {
   numeroCuatri: number;
 }
 
-export type Categoria = {
+export interface Categoria {
   id?: number;
   nombre: string;
   maxMaterias: number;
-};
+}
 
-export type Asignacion = {
+export interface ImportResultado {
+  creados: number;
+  ignorados: number;
+  filasIgnoradas: string[];
+  errores: string[];
+}
+
+export interface Asignacion {
   id?: number;
   materiaId: number;
   cuatrimestreId: number;
   turno: string;
   anio: number;
   dia: string;
-};
+  comision?: string;
+}
 
 export interface AsignacionDocente {
   id?: number;
@@ -48,8 +58,7 @@ export interface AsignacionDocente {
   confirmado: boolean;
 }
 
-export interface  Rol {
+export interface Rol {
   id: number;
   nombre: string;
-
-};
+}

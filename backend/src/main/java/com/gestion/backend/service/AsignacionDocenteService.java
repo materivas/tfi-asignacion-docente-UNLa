@@ -1,6 +1,8 @@
 package com.gestion.backend.service;
 
 import com.gestion.backend.dto.AsignacionDocenteDto;
+import com.gestion.backend.exception.ConflictoHorarioException;
+import com.gestion.backend.exception.LimiteCargaDocenteException;
 import com.gestion.backend.model.AsignacionDocente;
 import com.gestion.backend.model.Asignacion;
 import com.gestion.backend.model.Docente;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.*;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +42,9 @@ public class AsignacionDocenteService {
     @Autowired
     private RolRepository rolRepository;
 
+    @Autowired
+    private EmailService emailService;
+
     public List<AsignacionDocenteDto> listarTodos() {
         return asignacionDocenteRepository.findAll().stream().map(AsignacionDocenteDto::fromEntity).toList();
     }
@@ -50,29 +56,48 @@ public class AsignacionDocenteService {
     @Transactional
     public AsignacionDocenteDto crear(AsignacionDocenteDto dto) {
         Asignacion asignacion = asignacionRepository.findById(dto.getAsignacionId())
-            .orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
+                .orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
         Docente docente = docenteRepository.findById(dto.getDocenteId())
-            .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
         Rol rol = rolRepository.findById(dto.getRolId())
-            .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+        validarConflictoHorario(null, asignacion, docente, dto.getConfirmado());
+        validarLimiteCargaDocente(null, asignacion, docente, dto.getConfirmado());
         var asignacionDocente = AsignacionDocenteDto.toEntity(dto, asignacion, docente, rol);
-        return AsignacionDocenteDto.fromEntity(asignacionDocenteRepository.save(asignacionDocente));
+        // --- INICIO LÓGICA DE CORREO ---
+        AsignacionDocente guardado = asignacionDocenteRepository.save(asignacionDocente);
+        if (Boolean.TRUE.equals(guardado.getConfirmado())) {
+            emailService.enviarConfirmacionAsignacion(guardado);
+        }
+        return AsignacionDocenteDto.fromEntity(guardado);
+        // --- FIN LÓGICA DE CORREO ---
     }
 
+    @Transactional
     public AsignacionDocenteDto actualizar(Long id, AsignacionDocenteDto dto) {
         Asignacion asignacion = asignacionRepository.findById(dto.getAsignacionId())
-            .orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
+                .orElseThrow(() -> new RuntimeException("Asignacion no encontrada"));
         Docente docente = docenteRepository.findById(dto.getDocenteId())
-            .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Docente no encontrado"));
         Rol rol = rolRepository.findById(dto.getRolId())
-            .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         return asignacionDocenteRepository.findById(id).map(asignacionDocente -> {
+            validarConflictoHorario(id, asignacion, docente, dto.getConfirmado());
+            validarLimiteCargaDocente(id, asignacion, docente, dto.getConfirmado());
             asignacionDocente.setAsignacion(asignacion);
             asignacionDocente.setDocente(docente);
             asignacionDocente.setRol(rol);
             asignacionDocente.setHorasAsignadas(dto.getHorasAsignadas());
             asignacionDocente.setConfirmado(dto.getConfirmado());
-            return AsignacionDocenteDto.fromEntity(asignacionDocenteRepository.save(asignacionDocente));
+
+            // --- INICIO LÓGICA DE CORREO ---
+            AsignacionDocente guardado = asignacionDocenteRepository.save(asignacionDocente);
+            if (Boolean.TRUE.equals(guardado.getConfirmado())) {
+                emailService.enviarConfirmacionAsignacion(guardado);
+            }
+            return AsignacionDocenteDto.fromEntity(guardado);
+            // --- FIN LÓGICA DE CORREO ---
+
         }).orElseThrow(() -> new RuntimeException("AsignacionDocente no encontrada"));
     }
 
@@ -80,7 +105,8 @@ public class AsignacionDocenteService {
         asignacionDocenteRepository.deleteById(id);
     }
 
-    public Map<String, Object> importarAsignacionDocentesDesdeExcel(org.springframework.web.multipart.MultipartFile archivo) throws java.io.IOException {
+    public Map<String, Object> importarAsignacionDocentesDesdeExcel(
+            org.springframework.web.multipart.MultipartFile archivo) throws java.io.IOException {
         List<String> errores = new ArrayList<>();
         int creados = 0;
         int ignorados = 0;
@@ -110,7 +136,8 @@ public class AsignacionDocenteService {
             int lastRow = hoja.getLastRowNum();
             for (int i = 1; i <= lastRow; i++) {
                 Row fila = hoja.getRow(i);
-                if (fila == null) continue;
+                if (fila == null)
+                    continue;
                 try {
                     String asignacionIdStr = obtenerTexto(fila.getCell(0));
                     String docenteIdStr = obtenerTexto(fila.getCell(1));
@@ -118,7 +145,8 @@ public class AsignacionDocenteService {
                     String horasAsignadasStr = obtenerTexto(fila.getCell(3));
                     String confirmadoStr = obtenerTexto(fila.getCell(4));
 
-                    if (asignacionIdStr.isEmpty() || docenteIdStr.isEmpty() || rolIdStr.isEmpty() || horasAsignadasStr.isEmpty() || confirmadoStr.isEmpty()) {
+                    if (asignacionIdStr.isEmpty() || docenteIdStr.isEmpty() || rolIdStr.isEmpty()
+                            || horasAsignadasStr.isEmpty() || confirmadoStr.isEmpty()) {
                         errores.add("Fila " + (i + 1) + ": campos incompletos");
                         continue;
                     }
@@ -171,6 +199,13 @@ public class AsignacionDocenteService {
             }
             if (!nuevasAsignacionesDocente.isEmpty()) {
                 asignacionDocenteRepository.saveAll(nuevasAsignacionesDocente);
+
+                // Enviar correos de confirmación para las asignaciones confirmadas
+                for (AsignacionDocente asignacionDocente : nuevasAsignacionesDocente) {
+                    if (Boolean.TRUE.equals(asignacionDocente.getConfirmado())) {
+                        emailService.enviarConfirmacionAsignacion(asignacionDocente);
+                    }
+                }
             }
         }
 
@@ -182,17 +217,106 @@ public class AsignacionDocenteService {
     }
 
     private String obtenerTexto(Cell cell) {
-        if (cell == null) return "";
+        if (cell == null)
+            return "";
         return switch (cell.getCellType()) {
             case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 double val = cell.getNumericCellValue();
-                if (val == (long) val) yield String.valueOf((long) val).trim();
-                else yield String.valueOf(val).trim();
+                if (val == (long) val)
+                    yield String.valueOf((long) val).trim();
+                else
+                    yield String.valueOf(val).trim();
             }
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
             case FORMULA -> cell.getCellFormula();
             default -> "";
         };
+    }
+
+    private void validarConflictoHorario(Long asignacionDocenteIdActual, Asignacion asignacionNueva, Docente docente,
+            Boolean confirmadoNuevo) {
+        if (!Boolean.TRUE.equals(confirmadoNuevo)) {
+            return;
+        }
+
+        for (AsignacionDocente existente : asignacionDocenteRepository.findAll()) {
+            if (asignacionDocenteIdActual != null && asignacionDocenteIdActual.equals(existente.getId())) {
+                continue;
+            }
+            if (!Boolean.TRUE.equals(existente.getConfirmado())) {
+                continue;
+            }
+            if (existente.getDocente() == null || existente.getAsignacion() == null) {
+                continue;
+            }
+            if (!docente.getId().equals(existente.getDocente().getId())) {
+                continue;
+            }
+
+            Asignacion asignacionExistente = existente.getAsignacion();
+            if (Objects.equals(asignacionNueva.getId(), asignacionExistente.getId())) {
+                throw new ConflictoHorarioException(
+                        "No se puede asignar a " + docente.getNombre() + ": ya figura en esta materia.");
+            }
+
+            if (mismoHorario(asignacionNueva, asignacionExistente)) {
+                throw new ConflictoHorarioException(
+                        "No se puede asignar a " + docente.getNombre()
+                                + ": ya tiene una materia en ese horario ("
+                                + textoHorario(asignacionExistente) + ").");
+            }
+        }
+    }
+
+    private void validarLimiteCargaDocente(Long asignacionDocenteIdActual, Asignacion asignacionNueva, Docente docente,
+            Boolean confirmadoNuevo) {
+        if (!Boolean.TRUE.equals(confirmadoNuevo)) {
+            return;
+        }
+        if (docente.getCategoria() == null || docente.getCategoria().getMaxMaterias() == null) {
+            return;
+        }
+
+        int maxMaterias = docente.getCategoria().getMaxMaterias();
+        long cargaActual = asignacionDocenteRepository.findAll().stream()
+                .filter(existente -> asignacionDocenteIdActual == null
+                        || !asignacionDocenteIdActual.equals(existente.getId()))
+                .filter(existente -> Boolean.TRUE.equals(existente.getConfirmado()))
+                .filter(existente -> existente.getDocente() != null && existente.getAsignacion() != null)
+                .filter(existente -> docente.getId().equals(existente.getDocente().getId()))
+                .filter(existente -> Objects.equals(asignacionNueva.getAnio(), existente.getAsignacion().getAnio()))
+                .count();
+
+        if (cargaActual >= maxMaterias) {
+            String anioTexto = asignacionNueva.getAnio() != null ? " en " + asignacionNueva.getAnio() : "";
+            throw new LimiteCargaDocenteException(
+                    "No se puede asignar a " + docente.getNombre()
+                            + ": ya alcanzo el maximo de " + maxMaterias
+                            + " materia(s)" + anioTexto + ".");
+        }
+    }
+
+    private boolean mismoHorario(Asignacion primera, Asignacion segunda) {
+        return Objects.equals(primera.getAnio(), segunda.getAnio())
+                && normalizar(primera.getDia()).equals(normalizar(segunda.getDia()))
+                && normalizar(primera.getTurno()).equals(normalizar(segunda.getTurno()));
+    }
+
+    private String normalizar(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return Normalizer.normalize(texto, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .trim()
+                .replace("maniana", "manana");
+    }
+
+    private String textoHorario(Asignacion asignacion) {
+        String dia = asignacion.getDia() != null ? asignacion.getDia() : "dia sin definir";
+        String turno = asignacion.getTurno() != null ? asignacion.getTurno() : "turno sin definir";
+        return dia + " - " + turno;
     }
 }

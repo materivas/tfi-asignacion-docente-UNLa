@@ -47,64 +47,40 @@ const PlanForm: React.FC<Props> = ({ planInicial, onSubmit, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "500px", margin: "2rem auto" }}>
-      <h3 style={{ textAlign: "center" }}>
-        {planInicial ? "Editar Plan" : "Alta de Plan"}
-      </h3>
+    <form onSubmit={handleSubmit} className="modal-form">
+      <div className="field">
+        <label>Nombre</label>
+        <input
+          value={nombre}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
+          required
+          placeholder="Ej: Plan 2025"
+        />
+      </div>
 
-      <label>Nombre:</label>
-      <input
-        value={nombre}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => setNombre(e.target.value)}
-        required
-        style={inputEstilo}
-        placeholder="Ej: Plan 2025"
-      />
+      <div className="field">
+        <label>Descripción</label>
+        <textarea
+          value={descripcion}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescripcion(e.target.value)}
+          required
+          placeholder="Resumen del plan académico…"
+          style={{ minHeight: "5rem", resize: "vertical" }}
+        />
+      </div>
 
-      <label>Descripción:</label>
-      <textarea
-        value={descripcion}
-        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescripcion(e.target.value)}
-        required
-        style={{ ...inputEstilo, height: "6rem", resize: "vertical" }}
-        placeholder="Resumen del plan académico…"
-      />
-
-      <button type="submit" style={btnEstilo}>
-        {planInicial ? "Guardar cambios" : "Registrar"}
-      </button>
-
-      {planInicial && onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{ ...btnEstilo, backgroundColor: "#999", marginTop: "0.5rem" }}
-        >
-          Cancelar edición
+      <div className="form-actions">
+        {planInicial && onCancel && (
+          <button type="button" onClick={onCancel} className="btn-cancel">
+            Cancelar
+          </button>
+        )}
+        <button type="submit" className="btn-submit">
+          {planInicial ? "Guardar cambios" : "Registrar"}
         </button>
-      )}
+      </div>
     </form>
   );
-};
-
-const inputEstilo: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.5rem",
-  marginBottom: "1rem",
-  borderRadius: "4px",
-  border: "1px solid #ccc"
-};
-
-const btnEstilo: React.CSSProperties = {
-  backgroundColor: "#7A1F1F",
-  color: "white",
-  padding: "0.5rem 1rem",
-  borderRadius: "6px",
-  fontWeight: "bold",
-  border: "none",
-  cursor: "pointer",
-  width: "100%"
 };
 
 export default PlanForm;
