@@ -52,5 +52,6 @@ services:
     depends_on:
       - backend
 
+# ---- Volumes ----
 volumes:
   pgdata:
