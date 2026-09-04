@@ -36,4 +36,9 @@ public class Docente {
     @OneToMany(mappedBy = "docente", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<AsignacionDocente> asignacionesDocente;
+
+    // DOC: [EV-19] Dueño de la relación OneToOne. Vincula la entidad de negocio (Docente) con la de autenticación (Usuario).
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", referencedColumnName = "id")
+    private Usuario usuario;
 }

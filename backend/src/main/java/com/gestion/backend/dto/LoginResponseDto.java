@@ -1,11 +1,14 @@
 package com.gestion.backend.dto;
 
 public class LoginResponseDto {
-    
+
     private boolean success;
     private String message;
     private String username;
     private String nombre;
+
+    // DOC: [EV-21] Se agregó el atributo 'token' para devolver el JWT al frontend tras un login exitoso.
+    private String token;
 
     // Constructores
     public LoginResponseDto() {
@@ -16,11 +19,12 @@ public class LoginResponseDto {
         this.message = message;
     }
 
-    public LoginResponseDto(boolean success, String message, String username, String nombre) {
+    public LoginResponseDto(boolean success, String message, String username, String nombre, String token) {
         this.success = success;
         this.message = message;
         this.username = username;
         this.nombre = nombre;
+        this.token = token;
     }
 
     // Getters y Setters
@@ -54,5 +58,13 @@ public class LoginResponseDto {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }
