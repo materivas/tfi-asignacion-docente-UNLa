@@ -18,7 +18,6 @@
 		<lombok.version>1.18.46</lombok.version>
 	</properties>
 	<dependencies>
-		<!-- TODAS tus dependencias aquí -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -70,17 +69,34 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Spring Security para BCrypt-->
+		<!-- Seguridad Completa y JWT (EV-21 y EV-22) -->
 		<dependency>
-			<groupId>org.springframework.security</groupId>
-			<artifactId>spring-security-crypto</artifactId>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.11.5</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.11.5</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
-           <groupId>org.apache.poi</groupId>
-           <artifactId>poi-ooxml</artifactId>
-           <version>5.2.3</version>
-        </dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.3</version>
+		</dependency>
 
 		<!-- Spring Mail para envío de correos -->
 		<dependency>
