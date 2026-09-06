@@ -1,3 +1,4 @@
+import './index.css';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home'
 import Tablero from './pages/Tablero';
@@ -9,44 +10,45 @@ import GestionMateria from './pages/GestionMateria';
 import GestionDocente from './pages/GestionDocente';
 import GestionAsignacion from './pages/GestionAsignacion';
 import Login from './pages/Login';
+import MisHorarios from './pages/MisHorarios';
 
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
-import ProtectedRoute from './components/ProtectedRoute';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
 function App() {
-  const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
-  return (
-    <Routes>
-      {/* Ruta pública de login */}
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} 
-      />
-      
-      {/* Rutas protegidas */}
-      <Route path="/*" element={
-        <ProtectedRoute>
-          <Layout>
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/tablero" element={<Tablero />} />
-              <Route path="/gestion" element={<Gestion />} />
-              <Route path="/gestionCuatrimestre" element={<GestionCuatrimestre />} />
-              <Route path="/gestionCategoria" element={<GestionCategoria />} />
-              <Route path="/gestionDocente" element={<GestionDocente />} />
-              <Route path="/gestionPlan" element={<GestionPlan />} />
-              <Route path="/gestionMateria" element={<GestionMateria />} /> 
-              <Route path="/gestionAsignacion" element={<GestionAsignacion />} />          
-            </Routes>
-          </Layout>
-        </ProtectedRoute>
-      } />
-    </Routes>
-  );
+    return (
+        <Routes>
+            <Route
+                path="/login"
+                element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+            />
+
+            <Route path="/*" element={
+                <ProtectedRoute>
+                    <Layout>
+                        <Navbar />
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/mis-horarios" element={<MisHorarios />} />
+
+                            <Route path="/tablero" element={<ProtectedRoute requireAdmin={true}><Tablero /></ProtectedRoute>} />
+                            <Route path="/gestion" element={<ProtectedRoute requireAdmin={true}><Gestion /></ProtectedRoute>} />
+                            <Route path="/gestionCuatrimestre" element={<ProtectedRoute requireAdmin={true}><GestionCuatrimestre /></ProtectedRoute>} />
+                            <Route path="/gestionCategoria" element={<ProtectedRoute requireAdmin={true}><GestionCategoria /></ProtectedRoute>} />
+                            <Route path="/gestionDocente" element={<ProtectedRoute requireAdmin={true}><GestionDocente /></ProtectedRoute>} />
+                            <Route path="/gestionPlan" element={<ProtectedRoute requireAdmin={true}><GestionPlan /></ProtectedRoute>} />
+                            <Route path="/gestionMateria" element={<ProtectedRoute requireAdmin={true}><GestionMateria /></ProtectedRoute>} />
+                            <Route path="/gestionAsignacion" element={<ProtectedRoute requireAdmin={true}><GestionAsignacion /></ProtectedRoute>} />
+                        </Routes>
+                    </Layout>
+                </ProtectedRoute>
+            } />
+        </Routes>
+    );
 }
 
 export default App;

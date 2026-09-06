@@ -1,19 +1,29 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import type { ReactNode } from 'react';
+import type { JSX } from 'react';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
+  children: JSX.Element;
+  requireAdmin?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuth();
+export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+  const { isAuthenticated, rol, isLoading } = useAuth();
 
+  if (isLoading) {
+    return <div style={{ padding: '2rem', textAlign: 'center' }}>Validando credenciales...</div>;
+  }
+
+  // Si no está logueado, lo patea al login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
-};
+  // Si la ruta requiere admin y el usuario es docente, lo patea a sus horarios
+  if (requireAdmin && rol !== 'ROLE_ADMIN') {
+    return <Navigate to="/mis-horarios" replace />;
+  }
 
-export default ProtectedRoute;
+  // Si pasa todas las validaciones, renderiza la vista solicitada
+  return children;
+};
