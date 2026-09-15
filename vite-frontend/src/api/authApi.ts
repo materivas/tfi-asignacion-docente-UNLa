@@ -2,6 +2,14 @@ import axios from 'axios';
 
 const API_URL = '/api/auth';
 
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export interface LoginRequest {
   username: string;
   password: string;
@@ -12,6 +20,7 @@ export interface LoginResponse {
   message: string;
   username?: string;
   nombre?: string;
+  token?: string;
 }
 
 export const authApi = {
