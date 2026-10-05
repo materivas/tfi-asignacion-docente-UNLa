@@ -32,25 +32,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [username, setUsername] = useState<string | null>(null);
   const [nombre, setNombre] = useState<string | null>(null);
   const [rol, setRol] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const savedToken = localStorage.getItem('token');
     const savedUsername = localStorage.getItem('username');
     const savedNombre = localStorage.getItem('nombre');
 
-    if (savedToken && savedUsername) {
-      try {
+    try {
+      if (savedToken && savedUsername) {
         // DOC: [EV-27] Decodificación del payload del token persistido al recargar la página.
         const decoded: any = jwtDecode(savedToken);
-        // Corrección de Bug: El JWT inyecta el claim en inglés ("role")
-        setRol(decoded.role || 'ROLE_DOCENTE');
-        setIsAuthenticated(true);
-        setUsername(savedUsername);
-        setNombre(savedNombre);
-      } catch (error) {
-        logout();
+        const tokenExpired = decoded.exp != null && decoded.exp * 1000 <= Date.now();
+
+        if (!tokenExpired) {
+          // Corrección de Bug: El JWT inyecta el claim en inglés ("role")
+          setRol(decoded.role || 'ROLE_DOCENTE');
+          setIsAuthenticated(true);
+          setUsername(savedUsername);
+          setNombre(savedNombre);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          localStorage.removeItem('nombre');
+        }
       }
+    } catch (error) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('nombre');
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 

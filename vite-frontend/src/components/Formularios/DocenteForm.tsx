@@ -3,6 +3,10 @@ import type { ChangeEvent, FormEvent } from "react";
 import type { Docente, Categoria } from "../../types";
 import { listarCategorias } from "../../api/categoriaApi";
 
+// DOC: [HU-2.1] Regex de validación de email alineado con el estándar RFC 5322 simplificado.
+// Se valida en frontend como primera línea de defensa; el backend aplica @Email como segunda.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 interface Props {
   docenteInicial?: Docente;
   onSubmit?: (docente: Docente) => void;
@@ -16,6 +20,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
   const [categoriaId, setCategoriaId] = useState<number | "">(docenteInicial?.categoriaId ?? "");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -31,18 +36,35 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
     fetchCategorias();
   }, []);
 
+  // DOC: [HU-2.1] Validación de formato en tiempo real para dar feedback inmediato al usuario.
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const valor = e.target.value;
+    setEmail(valor);
+    if (valor && !EMAIL_REGEX.test(valor)) {
+      setEmailError("El formato del email no es válido");
+    } else {
+      setEmailError(null);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!nombre || !dni || categoriaId === "") {
+    // DOC: [HU-2.1] Agregado de validación de obligatoriedad del email antes de enviar al backend.
+    if (!nombre || !dni || !email || categoriaId === "") {
       alert("Completá todos los campos.");
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      setEmailError("El formato del email no es válido.");
       return;
     }
 
     const docente: Docente = {
       nombre,
       dni,
-      email, // <-- Se envía el email al backend
+      email,
       categoriaId: Number(categoriaId),
       ...(docenteInicial?.id != null && { id: docenteInicial.id })
     };
@@ -53,6 +75,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
       setDni("");
       setEmail(""); // <-- Limpiar el campo
       setCategoriaId("");
+      setEmailError(null); // <-- Limpiar el error de email
     }
   };
 
@@ -80,17 +103,18 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
         />
       </div>
 
-      {/* NUEVO CAMPO VISUAL DEL EMAIL */}
+      {/* DOC: [HU-2.1] Campo email obligatorio. Actúa como username del Usuario generado automáticamente. */}
       <div className="field">
-        <label>Email (Opcional)</label>
+        <label>Email institucional</label>
         <input
-            type="email"
-            value={email}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            placeholder="Ej: correo@unla.edu.ar"
+          type="email"
+          value={email}
+          onChange={handleEmailChange}
+          required
+          placeholder="Ej: correo@unla.edu.ar"
         />
+        {emailError && <span className="field-error">{emailError}</span>}
       </div>
-      {/* FIN DEL NUEVO CAMPO */}
 
       <div className="field">
         <label>Categoría</label>

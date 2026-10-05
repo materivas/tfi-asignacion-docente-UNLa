@@ -2,15 +2,23 @@ package com.gestion.backend.dto;
 
 import com.gestion.backend.model.Docente;
 import com.gestion.backend.model.Categoria;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class DocenteDto {
     private Long id;
     private String nombre;
     private String dni;
+
+    @NotBlank(message = "El email es obligatorio")
+    @Email(message = "El email no tiene un formato válido")
     private String email;
+
     private Long categoriaId;
 
-    public DocenteDto() {}
+    public DocenteDto() {
+    }
 
     public DocenteDto(Long id, String nombre, String dni, String email, Long categoriaId) {
         this.id = id;
@@ -22,12 +30,11 @@ public class DocenteDto {
 
     public static DocenteDto fromEntity(Docente docente) {
         return new DocenteDto(
-            docente.getId(),
-            docente.getNombre(),
-            docente.getDni(),
+                docente.getId(),
+                docente.getNombre(),
+                docente.getDni(),
                 docente.getEmail(),
-            docente.getCategoria() != null ? docente.getCategoria().getId() : null
-        );
+                docente.getCategoria() != null ? docente.getCategoria().getId() : null);
     }
 
     public static Docente toEntity(DocenteDto dto, Categoria categoria) {
@@ -56,17 +63,25 @@ public class DocenteDto {
         this.nombre = nombre;
     }
 
-    public String getDni() {return dni;}
+    public String getDni() {
+        return dni;
+    }
 
-    public String getEmail() { return email;}
+    public String getEmail() {
+        return email;
+    }
 
-    public void setEmail(String email) { this.email = email;}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
     public void setDni(String dni) {
         this.dni = dni;
     }
 
-    public Long getCategoriaId() { return categoriaId;}
+    public Long getCategoriaId() {
+        return categoriaId;
+    }
 
     public void setCategoriaId(Long categoriaId) {
         this.categoriaId = categoriaId;
