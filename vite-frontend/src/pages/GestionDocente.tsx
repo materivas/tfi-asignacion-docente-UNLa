@@ -61,9 +61,18 @@ function GestionDocente() {
       setDocentes((prev) => [...prev, nuevo]);
       setMostrarFormulario(false);
       toast.success("Docente registrado exitosamente");
-    } catch (err) {
+    } catch (err: any) {
       console.error("❌ Error al crear docente:", err);
-      toast.error("No se pudo registrar el docente");
+
+      const mensaje = typeof err?.response?.data === 'string'
+        ? err.response.data
+        : (err?.message ?? 'No se pudo registrar el docente');
+
+      if (mensaje.toLowerCase().includes('email') || mensaje.toLowerCase().includes('correo')) {
+        toast.error("Correo ya registrado");
+      } else {
+        toast.error("No se pudo registrar el docente");
+      }
     }
   };
 

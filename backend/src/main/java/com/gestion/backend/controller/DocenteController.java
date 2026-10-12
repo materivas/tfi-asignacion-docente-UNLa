@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,7 +45,8 @@ public class DocenteController {
 		return docenteService.obtenerPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
 	}
 
-	// DOC: [EV-22] Endpoint exclusivo para docentes (retornará 403 Forbidden a los administradores).
+	// DOC: [EV-22] Endpoint exclusivo para docentes (retornará 403 Forbidden a los
+	// administradores).
 	@PreAuthorize("hasRole('DOCENTE')")
 	@GetMapping("/mis-horarios")
 	public ResponseEntity<?> verMisHorarios() {
@@ -59,9 +61,12 @@ public class DocenteController {
 		try {
 			DocenteDto nuevo = docenteService.crear(docenteDto);
 			return ResponseEntity.ok(nuevo);
+		} catch (ResponseStatusException e) {
+			System.err.println("❌ Error al crear docente: " + e.getReason());
+			return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
 		} catch (RuntimeException e) {
 			System.err.println("❌ Error al crear docente: " + e.getMessage());
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
 		} catch (Exception e) {
 			e.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error inesperado al crear docente.");
