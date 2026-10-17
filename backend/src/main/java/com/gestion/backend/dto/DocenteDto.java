@@ -2,9 +2,9 @@ package com.gestion.backend.dto;
 
 import com.gestion.backend.model.Docente;
 import com.gestion.backend.model.Categoria;
+import com.gestion.backend.model.Dedicacion;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public class DocenteDto {
     private Long id;
@@ -16,16 +16,20 @@ public class DocenteDto {
     private String email;
 
     private Long categoriaId;
+    private Dedicacion dedicacion;
+    private Boolean concursado;
 
     public DocenteDto() {
     }
 
-    public DocenteDto(Long id, String nombre, String dni, String email, Long categoriaId) {
+    public DocenteDto(Long id, String nombre, String dni, String email, Long categoriaId, Dedicacion dedicacion, Boolean concursado) {
         this.id = id;
         this.nombre = nombre;
         this.dni = dni;
         this.email = email;
         this.categoriaId = categoriaId;
+        this.dedicacion = dedicacion;
+        this.concursado = concursado;
     }
 
     public static DocenteDto fromEntity(Docente docente) {
@@ -34,7 +38,10 @@ public class DocenteDto {
                 docente.getNombre(),
                 docente.getDni(),
                 docente.getEmail(),
-                docente.getCategoria() != null ? docente.getCategoria().getId() : null);
+                docente.getCategoria() != null ? docente.getCategoria().getId() : null,
+                docente.getDedicacion(),
+                docente.getConcursado()
+        );
     }
 
     public static Docente toEntity(DocenteDto dto, Categoria categoria) {
@@ -44,6 +51,8 @@ public class DocenteDto {
         docente.setDni(dto.getDni());
         docente.setEmail(dto.getEmail());
         docente.setCategoria(categoria);
+        docente.setDedicacion(dto.getDedicacion());
+        docente.setConcursado(dto.getConcursado() != null ? dto.getConcursado() : false);
         return docente;
     }
 
@@ -67,6 +76,10 @@ public class DocenteDto {
         return dni;
     }
 
+    public void setDni(String dni) {
+        this.dni = dni;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -75,15 +88,27 @@ public class DocenteDto {
         this.email = email;
     }
 
-    public void setDni(String dni) {
-        this.dni = dni;
-    }
-
     public Long getCategoriaId() {
         return categoriaId;
     }
 
     public void setCategoriaId(Long categoriaId) {
         this.categoriaId = categoriaId;
+    }
+
+    public Dedicacion getDedicacion() {
+        return dedicacion;
+    }
+
+    public void setDedicacion(Dedicacion dedicacion) {
+        this.dedicacion = dedicacion;
+    }
+
+    public Boolean getConcursado() {
+        return concursado;
+    }
+
+    public void setConcursado(Boolean concursado) {
+        this.concursado = concursado;
     }
 }
