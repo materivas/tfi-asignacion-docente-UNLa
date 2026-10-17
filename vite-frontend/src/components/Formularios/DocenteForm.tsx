@@ -3,6 +3,8 @@ import type { ChangeEvent, FormEvent } from "react";
 import type { Docente, Categoria } from "../../types";
 import { listarCategorias } from "../../api/categoriaApi";
 
+// DOC: [HU-2.1] Regex de validación de email alineado con el estándar RFC 5322 simplificado.
+// Se valida en frontend como primera línea de defensa; el backend aplica @Email como segunda.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Props {
@@ -37,6 +39,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
     fetchCategorias();
   }, []);
 
+  // DOC: [HU-2.1] Validación de formato en tiempo real para dar feedback inmediato al usuario.
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const valor = e.target.value;
     setEmail(valor);
@@ -106,6 +109,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
           />
         </div>
 
+        {/* DOC: [HU-2.1] Campo email obligatorio. Actúa como username del Usuario generado automáticamente. */}
         <div className="field">
           <label>Email institucional</label>
           <input
@@ -168,7 +172,7 @@ const DocenteForm: React.FC<Props> = ({ docenteInicial, onSubmit, onCancel }) =>
 
         <div className="form-actions">
           {onCancel && (
-              <button type="button" onClick2={onCancel} className="btn-cancel" onClick={onCancel}>
+              <button type="button" onClick={onCancel} className="btn-cancel">
                 Cancelar
               </button>
           )}
