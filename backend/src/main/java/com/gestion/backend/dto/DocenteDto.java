@@ -5,6 +5,7 @@ import com.gestion.backend.model.Categoria;
 import com.gestion.backend.model.Dedicacion;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class DocenteDto {
     private Long id;
