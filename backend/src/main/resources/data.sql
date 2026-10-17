@@ -200,7 +200,7 @@ INSERT INTO asignacion_docente (id, asignacion_id, docente_id, rol_id, horas_asi
 SELECT setval('asignacion_seq',         (SELECT COALESCE(MAX(id), 1) FROM asignacion));
 SELECT setval('asignacion_docente_seq', (SELECT COALESCE(MAX(id), 1) FROM asignacion_docente));
 SELECT setval('materia_seq',            (SELECT COALESCE(MAX(id), 1) FROM materia));
-SELECT setval('docente_seq',            (SELECT COALESCE(MAX(id), 1) FROM docente));
+SELECT setval('docente_id_seq',         (SELECT COALESCE(MAX(id), 1) FROM docente));
 SELECT setval('plan_seq',               (SELECT COALESCE(MAX(id), 1) FROM plan));
 SELECT setval('categoria_seq',          (SELECT COALESCE(MAX(id), 1) FROM categoria));
 SELECT setval('rol_seq',                (SELECT COALESCE(MAX(id), 1) FROM rol));
