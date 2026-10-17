@@ -49,7 +49,6 @@ function GestionDocente() {
   }, []);
 
   const handleCrear = async (docente: Docente) => {
-    // Validar si ya existe un docente con el mismo DNI
     const docenteExistente = docentes.find(d => d.dni === docente.dni);
     if (docenteExistente) {
       toast.error(`Ya existe un docente con el DNI ${docente.dni}`);
@@ -82,7 +81,6 @@ function GestionDocente() {
       return;
     }
 
-    // Validar si ya existe otro docente con el mismo DNI
     const docenteExistente = docentes.find(d => d.dni === docente.dni && d.id !== docente.id);
     if (docenteExistente) {
       toast.error(`Ya existe otro docente con el DNI ${docente.dni}`);
@@ -92,7 +90,7 @@ function GestionDocente() {
     try {
       const actualizado = await actualizarDocente(docente.id, docente);
       setDocentes((prev) =>
-        prev.map((d) => (d.id === actualizado.id ? actualizado : d))
+          prev.map((d) => (d.id === actualizado.id ? actualizado : d))
       );
       setDocenteEditando(null);
       toast.success("Docente actualizado exitosamente");
@@ -121,244 +119,272 @@ function GestionDocente() {
     }
   };
 
-  // Filtrado de docentes
   const docentesFiltrados = docentes.filter((doc) => {
     const matchBusqueda = doc.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                         doc.dni.includes(busqueda);
+        doc.dni.includes(busqueda);
     const matchCategoria = filtroCategoria === "" || doc.categoriaId === filtroCategoria;
     return matchBusqueda && matchCategoria;
   });
 
+  // DOC: [EV-46] Utilidad para formatear la dedicación en la tabla
+  const formatDedicacion = (val?: string) => {
+    if (!val) return "Sin asignar";
+    const formats: Record<string, string> = {
+      "SIMPLE": "Simple",
+      "SEMI_EXCLUSIVA": "Semi-Exclusiva",
+      "EXCLUSIVA": "Exclusiva"
+    };
+    return formats[val] || val;
+  };
+
   return (
-    <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
-      <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
-        {/* Header */}
-        <div className="page-header">
-          <h1>Gestión de Docentes</h1>
-          <p>Administre el registro de docentes y sus categorías académicas</p>
-        </div>
-
-        {/* Controles y Filtros */}
-        <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Buscar por nombre o DNI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '250px', flex: 1 }} />
-            <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '200px' }}>
-              <option value="">Todas las categorías</option>
-              {Array.from(categoriasMap.entries()).map(([id, nombre]) => (
-                <option key={id} value={id}>{nombre}</option>
-              ))}
-            </select>
+      <main style={{ flex: 1, backgroundColor: 'var(--color-bg-secondary)' }}>
+        <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
+          {/* Header */}
+          <div className="page-header">
+            <h1>Gestión de Docentes</h1>
+            <p>Administre el registro de docentes, sus categorías académicas y dedicaciones</p>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
-            <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Nuevo Docente
-            </button>
-            <button onClick={() => descargarTemplateDocentes(categoriasMap)} className="btn btn-ghost" title="Descargar template para importar docentes">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="12 7 12 19"/><polyline points="7 14 12 19 17 14"/></svg>
-              Template
-            </button>
-            <label className="btn btn-ghost" style={{ cursor: importando ? 'not-allowed' : 'pointer', opacity: importando ? 0.6 : 1 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              {importando ? 'Importando…' : 'Importar'}
-              <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importando} onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setImportando(true);
-                setResultadoImport(null);
-                try {
-                  const res = await importarDocentesExcel(file);
-                  setResultadoImport(res);
-                  const resDocentes = await listarDocentes();
-                  setDocentes(resDocentes);
-                } catch (err) {
-                  console.error('Error al importar docentes:', err);
-                  toast.error('Error al importar el archivo Excel');
-                } finally {
-                  setImportando(false);
-                  e.target.value = '';
-                }
-              }} />
-            </label>
-          </div>
-        </div>
 
-        {/* Resultado de importación */}
-        {resultadoImport && (
-          <div style={{
-            backgroundColor: '#ecfdf5',
-            border: '1px solid #a7f3d0',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: 'var(--spacing-lg)',
-            marginBottom: 'var(--spacing-lg)',
-            position: 'relative'
-          }}>
-            <button
-              onClick={() => setResultadoImport(null)}
-              style={{ position: 'absolute', top: 8, right: 12, background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' }}
-            >✕</button>
-            <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#065f46' }}>
-              Resultado de la importación
-            </h3>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: resultadoImport.filasIgnoradas?.length ? 12 : 0 }}>
-              <span style={{ fontWeight: 600, color: '#065f46' }}>✓ Creados: {resultadoImport.creados}</span>
-              <span style={{ fontWeight: 600, color: '#92400e' }}>⊘ Ignorados: {resultadoImport.ignorados}</span>
+          {/* Controles y Filtros */}
+          <div className="filter-bar" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 'var(--spacing-md)', flex: 1, flexWrap: 'wrap' }}>
+              <input type="text" placeholder="Buscar por nombre o DNI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="form-input" style={{ minWidth: '250px', flex: 1 }} />
+              <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value === "" ? "" : Number(e.target.value))} className="form-select" style={{ minWidth: '200px' }}>
+                <option value="">Todas las categorías</option>
+                {Array.from(categoriasMap.entries()).map(([id, nombre]) => (
+                    <option key={id} value={id}>{nombre}</option>
+                ))}
+              </select>
             </div>
-            {resultadoImport.filasIgnoradas?.length > 0 && (
-              <details style={{ marginTop: 8 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#92400e', userSelect: 'none' }}>
-                  Filas ignoradas ({resultadoImport.filasIgnoradas.length})
-                </summary>
-                <ul style={{ 
-                  marginTop: 8, 
-                  marginBottom: 0,
-                  paddingLeft: 20,
-                  fontSize: 'var(--font-size-sm)',
-                  color: '#666',
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}>
-                  {resultadoImport.filasIgnoradas.map((fila, idx) => (
-                    <li key={idx} style={{ marginBottom: 4 }}>{fila}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
+            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+              <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nuevo Docente
+              </button>
+              <button onClick={() => descargarTemplateDocentes(categoriasMap)} className="btn btn-ghost" title="Descargar template para importar docentes">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="12 7 12 19"/><polyline points="7 14 12 19 17 14"/></svg>
+                Template
+              </button>
+              <label className="btn btn-ghost" style={{ cursor: importando ? 'not-allowed' : 'pointer', opacity: importando ? 0.6 : 1 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                {importando ? 'Importando…' : 'Importar'}
+                <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} disabled={importando} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setImportando(true);
+                  setResultadoImport(null);
+                  try {
+                    const res = await importarDocentesExcel(file);
+                    setResultadoImport(res);
+                    const resDocentes = await listarDocentes();
+                    setDocentes(resDocentes);
+                  } catch (err) {
+                    console.error('Error al importar docentes:', err);
+                    toast.error('Error al importar el archivo Excel');
+                  } finally {
+                    setImportando(false);
+                    e.target.value = '';
+                  }
+                }} />
+              </label>
+            </div>
           </div>
-        )}
 
-        {/* Tabla de Docentes */}
-        {loading ? (
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: 'var(--spacing-2xl)',
-            textAlign: 'center',
-            boxShadow: 'var(--shadow-sm)',
-          }}>
-            <div className="spinner" style={{ margin: '0 auto' }}></div>
-            <p style={{ marginTop: 'var(--spacing-md)', color: 'var(--color-gray-600)' }}>
-              Cargando docentes...
-            </p>
-          </div>
-        ) : error ? (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        ) : docentesFiltrados.length === 0 ? (
-          <div style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--border-radius-lg)',
-            padding: 'var(--spacing-2xl)',
-            textAlign: 'center',
-            boxShadow: 'var(--shadow-sm)',
-          }}>
-            <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-lg)' }}>
-              {busqueda || filtroCategoria ? "No se encontraron docentes con los filtros aplicados" : "No hay docentes registrados"}
-            </p>
-          </div>
-        ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>#</th>
-                  <th>Nombre</th>
-                  <th>DNI</th>
-                  <th>Categoría</th>
-                  <th style={{ textAlign: 'center', width: '150px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docentesFiltrados.map((doc, index) => (
-                  <tr key={doc.id}>
-                    <td style={{ fontWeight: 500, color: 'var(--color-gray-500)' }}>
-                      {index + 1}
-                    </td>
-                    <td style={{ fontWeight: 600, color: 'var(--color-gray-900)' }}>
-                      {doc.nombre}
-                    </td>
-                    <td style={{ fontFamily: 'monospace' }}>
-                      {doc.dni}
-                    </td>
-                    <td>
-                      <span className="badge badge-primary">
+          {/* Resultado de importación */}
+          {resultadoImport && (
+              <div style={{
+                backgroundColor: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: 'var(--border-radius-lg)',
+                padding: 'var(--spacing-lg)',
+                marginBottom: 'var(--spacing-lg)',
+                position: 'relative'
+              }}>
+                <button
+                    onClick={() => setResultadoImport(null)}
+                    style={{ position: 'absolute', top: 8, right: 12, background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' }}
+                >✕</button>
+                <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: '#065f46' }}>
+                  Resultado de la importación
+                </h3>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: resultadoImport.filasIgnoradas?.length ? 12 : 0 }}>
+                  <span style={{ fontWeight: 600, color: '#065f46' }}>✓ Creados: {resultadoImport.creados}</span>
+                  <span style={{ fontWeight: 600, color: '#92400e' }}>⊘ Ignorados: {resultadoImport.ignorados}</span>
+                </div>
+                {resultadoImport.filasIgnoradas?.length > 0 && (
+                    <details style={{ marginTop: 8 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#92400e', userSelect: 'none' }}>
+                        Filas ignoradas ({resultadoImport.filasIgnoradas.length})
+                      </summary>
+                      <ul style={{
+                        marginTop: 8,
+                        marginBottom: 0,
+                        paddingLeft: 20,
+                        fontSize: 'var(--font-size-sm)',
+                        color: '#666',
+                        maxHeight: '200px',
+                        overflowY: 'auto'
+                      }}>
+                        {resultadoImport.filasIgnoradas.map((fila, idx) => (
+                            <li key={idx} style={{ marginBottom: 4 }}>{fila}</li>
+                        ))}
+                      </ul>
+                    </details>
+                )}
+              </div>
+          )}
+
+          {/* Tabla de Docentes */}
+          {loading ? (
+              <div style={{
+                backgroundColor: 'var(--color-white)',
+                borderRadius: 'var(--border-radius-lg)',
+                padding: 'var(--spacing-2xl)',
+                textAlign: 'center',
+                boxShadow: 'var(--shadow-sm)',
+              }}>
+                <div className="spinner" style={{ margin: '0 auto' }}></div>
+                <p style={{ marginTop: 'var(--spacing-md)', color: 'var(--color-gray-600)' }}>
+                  Cargando docentes...
+                </p>
+              </div>
+          ) : error ? (
+              <div className="alert alert-error">
+                {error}
+              </div>
+          ) : docentesFiltrados.length === 0 ? (
+              <div style={{
+                backgroundColor: 'var(--color-white)',
+                borderRadius: 'var(--border-radius-lg)',
+                padding: 'var(--spacing-2xl)',
+                textAlign: 'center',
+                boxShadow: 'var(--shadow-sm)',
+              }}>
+                <p style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-lg)' }}>
+                  {busqueda || filtroCategoria ? "No se encontraron docentes con los filtros aplicados" : "No hay docentes registrados"}
+                </p>
+              </div>
+          ) : (
+              <div className="table-container">
+                <table>
+                  <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>#</th>
+                    <th>Nombre</th>
+                    <th>DNI</th>
+                    <th>Categoría</th>
+                    {/* DOC: [EV-46] Nuevas Columnas */}
+                    <th>Dedicación</th>
+                    <th style={{ textAlign: 'center' }}>Condición</th>
+                    <th style={{ textAlign: 'center', width: '150px' }}>Acciones</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {docentesFiltrados.map((doc, index) => (
+                      <tr key={doc.id}>
+                        <td style={{ fontWeight: 500, color: 'var(--color-gray-500)' }}>
+                          {index + 1}
+                        </td>
+                        <td style={{ fontWeight: 600, color: 'var(--color-gray-900)' }}>
+                          {doc.nombre}
+                        </td>
+                        <td style={{ fontFamily: 'monospace' }}>
+                          {doc.dni}
+                        </td>
+                        <td>
+                      <span className="badge" style={{ backgroundColor: 'var(--color-gray-100)', color: 'var(--color-gray-700)', border: '1px solid var(--color-gray-300)' }}>
                         {categoriasMap.get(doc.categoriaId ?? -1) ?? "Sin categoría"}
                       </span>
-                    </td>
-                    <td>
-                      <div style={{
-                        display: 'flex',
-                        gap: 'var(--spacing-sm)',
-                        justifyContent: 'center',
-                      }}>
-                        <button
-                          onClick={() => setDocenteEditando(doc)}
-                          className="btn btn-secondary btn-sm"
-                          title="Editar docente"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => doc.id != null && handleEliminar(doc.id)}
-                          className="btn btn-danger btn-sm"
-                          title="Eliminar docente"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </td>
+                        {/* DOC: [EV-46] Celdas de las nuevas columnas */}
+                        <td style={{ color: 'var(--color-gray-700)', fontWeight: 500 }}>
+                          {formatDedicacion(doc.dedicacion)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {doc.concursado ? (
+                              <span className="badge badge-primary" title="Docente por concurso público">
+                          Concursado
+                        </span>
+                          ) : (
+                              <span className="badge" style={{ backgroundColor: 'var(--color-gray-200)', color: 'var(--color-gray-600)' }} title="Docente interino">
+                          Interino
+                        </span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{
+                            display: 'flex',
+                            gap: 'var(--spacing-sm)',
+                            justifyContent: 'center',
+                          }}>
+                            <button
+                                onClick={() => setDocenteEditando(doc)}
+                                className="btn btn-secondary btn-sm"
+                                title="Editar docente"
+                            >
+                              Editar
+                            </button>
+                            <button
+                                onClick={() => doc.id != null && handleEliminar(doc.id)}
+                                className="btn btn-danger btn-sm"
+                                title="Eliminar docente"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                  ))}
+                  </tbody>
+                </table>
+              </div>
+          )}
 
-        {/* Estadísticas */}
-        <div className="stat-grid">
-          <div className="stat-item">
-            <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          {/* Estadísticas */}
+          <div className="stat-grid">
+            <div className="stat-item">
+              <div className="stat-icon" style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+              <div>
+                <div className="stat-value">{docentes.length}</div>
+                <div className="stat-label">Total Docentes</div>
+              </div>
             </div>
-            <div>
-              <div className="stat-value">{docentes.length}</div>
-              <div className="stat-label">Total Docentes</div>
-            </div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </div>
-            <div>
-              <div className="stat-value">{docentesFiltrados.length}</div>
-              <div className="stat-label">Resultados Filtrados</div>
+            <div className="stat-item">
+              <div className="stat-icon" style={{ background: '#e0f2fe', color: 'var(--color-secondary)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </div>
+              <div>
+                <div className="stat-value">{docentesFiltrados.length}</div>
+                <div className="stat-label">Resultados Filtrados</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Modal Crear */}
-      {mostrarFormulario && (
-        <Modal onClose={() => setMostrarFormulario(false)} title="Registrar Nuevo Docente">
-          <DocenteForm
-            onSubmit={handleCrear}
-            onCancel={() => setMostrarFormulario(false)}
-          />
-        </Modal>
-      )}
+        {/* Modal Crear */}
+        {mostrarFormulario && (
+            <Modal onClose={() => setMostrarFormulario(false)} title="Registrar Nuevo Docente">
+              <DocenteForm
+                  onSubmit={handleCrear}
+                  onCancel={() => setMostrarFormulario(false)}
+              />
+            </Modal>
+        )}
 
-      {/* Modal Editar */}
-      {docenteEditando && (
-        <Modal onClose={() => setDocenteEditando(null)} title="Editar Docente">
-          <DocenteForm
-            docenteInicial={docenteEditando}
-            onSubmit={handleEditar}
-            onCancel={() => setDocenteEditando(null)}
-          />
-        </Modal>
-      )}
-    </main>
+        {/* Modal Editar */}
+        {docenteEditando && (
+            <Modal onClose={() => setDocenteEditando(null)} title="Editar Docente">
+              <DocenteForm
+                  docenteInicial={docenteEditando}
+                  onSubmit={handleEditar}
+                  onCancel={() => setDocenteEditando(null)}
+              />
+            </Modal>
+        )}
+      </main>
   );
 }
 

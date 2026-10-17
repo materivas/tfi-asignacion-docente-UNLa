@@ -17,7 +17,9 @@ export interface Docente {
   nombre: string; 
   dni: string;
   email?: string;
-  categoriaId: number; 
+  categoriaId: number;
+  dedicacion?: string; // NUEVO
+  concursado?: boolean; // NUEVO
 }
 
 export interface Cuatrimestre {
