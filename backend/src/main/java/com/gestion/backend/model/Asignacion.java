@@ -2,6 +2,8 @@ package com.gestion.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,11 +12,12 @@ import java.text.Normalizer;
 import java.util.Locale;
 
 @Entity
+@Audited
 @Table(name = "asignacion")
 @NoArgsConstructor
 @Getter
 @Setter
-public class Asignacion {
+public class Asignacion extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "asignacion_seq_gen")
@@ -23,11 +26,13 @@ public class Asignacion {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "materia_id", nullable = false)
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @JsonIgnore
     private Materia materia;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cuatrimestre_id", nullable = false)
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @JsonIgnore
     private Cuatrimestre cuatrimestre;
 

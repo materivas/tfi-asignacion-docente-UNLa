@@ -3,6 +3,62 @@
 -- NOTA: El usuario admin se crea automaticamente mediante DataInitializer.java
 -- Comision: {codigo_materia}-1 {TM|TT|TN} (Maniana=TM, Tarde=TT, Noche=TN)
 
+ALTER TABLE asignacion ADD COLUMN IF NOT EXISTS created_by varchar(100) DEFAULT 'system';
+ALTER TABLE asignacion ADD COLUMN IF NOT EXISTS updated_by varchar(100) DEFAULT 'system';
+ALTER TABLE asignacion ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE docente ADD COLUMN IF NOT EXISTS created_by varchar(100) DEFAULT 'system';
+ALTER TABLE docente ADD COLUMN IF NOT EXISTS updated_by varchar(100) DEFAULT 'system';
+ALTER TABLE docente ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE docente ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE materia ADD COLUMN IF NOT EXISTS created_by varchar(100) DEFAULT 'system';
+ALTER TABLE materia ADD COLUMN IF NOT EXISTS updated_by varchar(100) DEFAULT 'system';
+ALTER TABLE materia ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE materia ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion_docente ADD COLUMN IF NOT EXISTS created_by varchar(100) DEFAULT 'system';
+ALTER TABLE asignacion_docente ADD COLUMN IF NOT EXISTS updated_by varchar(100) DEFAULT 'system';
+ALTER TABLE asignacion_docente ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion_docente ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE asignacion ALTER COLUMN created_by SET DEFAULT 'system';
+ALTER TABLE asignacion ALTER COLUMN updated_by SET DEFAULT 'system';
+ALTER TABLE asignacion ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE docente ALTER COLUMN created_by SET DEFAULT 'system';
+ALTER TABLE docente ALTER COLUMN updated_by SET DEFAULT 'system';
+ALTER TABLE docente ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE docente ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE materia ALTER COLUMN created_by SET DEFAULT 'system';
+ALTER TABLE materia ALTER COLUMN updated_by SET DEFAULT 'system';
+ALTER TABLE materia ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE materia ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion_docente ALTER COLUMN created_by SET DEFAULT 'system';
+ALTER TABLE asignacion_docente ALTER COLUMN updated_by SET DEFAULT 'system';
+ALTER TABLE asignacion_docente ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE asignacion_docente ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE asignacion SET created_by = COALESCE(created_by, 'system'), updated_by = COALESCE(updated_by, 'system'), created_at = COALESCE(created_at, CURRENT_TIMESTAMP), updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP);
+UPDATE docente SET created_by = COALESCE(created_by, 'system'), updated_by = COALESCE(updated_by, 'system'), created_at = COALESCE(created_at, CURRENT_TIMESTAMP), updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP);
+UPDATE materia SET created_by = COALESCE(created_by, 'system'), updated_by = COALESCE(updated_by, 'system'), created_at = COALESCE(created_at, CURRENT_TIMESTAMP), updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP);
+UPDATE asignacion_docente SET created_by = COALESCE(created_by, 'system'), updated_by = COALESCE(updated_by, 'system'), created_at = COALESCE(created_at, CURRENT_TIMESTAMP), updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP);
+
+ALTER TABLE asignacion ALTER COLUMN created_by SET NOT NULL;
+ALTER TABLE asignacion ALTER COLUMN updated_by SET NOT NULL;
+ALTER TABLE asignacion ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE asignacion ALTER COLUMN updated_at SET NOT NULL;
+ALTER TABLE docente ALTER COLUMN created_by SET NOT NULL;
+ALTER TABLE docente ALTER COLUMN updated_by SET NOT NULL;
+ALTER TABLE docente ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE docente ALTER COLUMN updated_at SET NOT NULL;
+ALTER TABLE materia ALTER COLUMN created_by SET NOT NULL;
+ALTER TABLE materia ALTER COLUMN updated_by SET NOT NULL;
+ALTER TABLE materia ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE materia ALTER COLUMN updated_at SET NOT NULL;
+ALTER TABLE asignacion_docente ALTER COLUMN created_by SET NOT NULL;
+ALTER TABLE asignacion_docente ALTER COLUMN updated_by SET NOT NULL;
+ALTER TABLE asignacion_docente ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE asignacion_docente ALTER COLUMN updated_at SET NOT NULL;
+
 -- =====================================
 -- LIMPIEZA
 -- =====================================

@@ -3,10 +3,13 @@ package com.gestion.backend.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 @Entity
+@Audited
 @Table(name = "docente")
-public class Docente {
+public class Docente extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +26,7 @@ public class Docente {
 
     @ManyToOne
     @JoinColumn(name = "categoria_id")
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     private Categoria categoria;
 
     @Enumerated(EnumType.STRING)
@@ -33,6 +37,7 @@ public class Docente {
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "usuario_id", referencedColumnName = "id")
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     private Usuario usuario;
 
     public Docente() {

@@ -1,11 +1,14 @@
 package com.gestion.backend.controller;
 
 import com.gestion.backend.dto.AsignacionDto;
+import com.gestion.backend.dto.HistorialAsignacionDto;
 import com.gestion.backend.service.AsignacionService;
+import com.gestion.backend.service.HistorialAsignacionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -17,6 +20,15 @@ public class AsignacionController {
 
     @Autowired
     private AsignacionService asignacionService;
+
+    @Autowired
+    private HistorialAsignacionService historialAsignacionService;
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/{id}/historial")
+    public ResponseEntity<List<HistorialAsignacionDto>> obtenerHistorial(@PathVariable Long id) {
+        return ResponseEntity.ok(historialAsignacionService.obtenerHistorial(id));
+    }
 
     @GetMapping
     public List<AsignacionDto> listarTodos() {
