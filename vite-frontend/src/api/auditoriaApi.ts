@@ -16,9 +16,16 @@ export interface EventoHistorialAsignacion {
   revision: number;
   fecha: string;
   autor: string;
-  entidad: EntidadAuditada;
+  entidad: 'ASIGNACION' | 'ASIGNACION_DOCENTE';
   accion: 'ADD' | 'MOD' | 'DEL';
   estado: Record<string, unknown>;
+}
+
+export interface PaginaHistorialAsignacion {
+  contenido: EventoHistorialAsignacion[];
+  pagina: number;
+  tamanio: number;
+  hayMas: boolean;
 }
 
 export interface PaginaAuditoria {
@@ -40,7 +47,9 @@ export const buscarHistorialAuditoria = async (filtros: FiltrosAuditoria) => {
   return response.data;
 };
 
-export const buscarHistorialAsignacion = async (asignacionId: number) => {
-  const response = await axios.get<EventoHistorialAsignacion[]>(`/api/asignaciones/${asignacionId}/historial`);
+export const buscarHistorialAsignacion = async (asignacionId: number, pagina = 0, tamanio = 20) => {
+  const response = await axios.get<PaginaHistorialAsignacion>(`/api/asignaciones/${asignacionId}/historial`, {
+    params: { pagina, tamanio },
+  });
   return response.data;
 };

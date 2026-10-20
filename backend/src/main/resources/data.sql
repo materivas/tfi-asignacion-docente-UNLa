@@ -1,5 +1,5 @@
 -- Script de datos iniciales para el sistema de gestion de docentes
--- Se ejecuta automaticamente al iniciar la aplicacion
+-- Seed manual/optativo; SPRING_SQL_INIT_MODE=always lo ejecuta al iniciar.
 -- NOTA: El usuario admin se crea automaticamente mediante DataInitializer.java
 -- Comision: {codigo_materia}-1 {TM|TT|TN} (Maniana=TM, Tarde=TT, Noche=TN)
 
@@ -62,6 +62,8 @@ ALTER TABLE asignacion_docente ALTER COLUMN updated_at SET NOT NULL;
 -- =====================================
 -- LIMPIEZA
 -- =====================================
+-- Este bloque elimina todos los datos del dominio. Ejecutarlo solo para un
+-- bootstrap/reset manual, nunca en cada reinicio de una base con auditoria.
 DELETE FROM asignacion_docente;
 DELETE FROM asignacion;
 DELETE FROM docente;

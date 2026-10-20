@@ -10,6 +10,7 @@ public class AuditRevisionListener implements RevisionListener {
     public void newRevision(Object revisionEntity) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication != null && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
                 ? authentication.getName()
                 : "system";
         ((AuditRevision) revisionEntity).setModifiedBy(username);

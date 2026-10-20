@@ -131,7 +131,7 @@ function HistorialCambios() {
       <div className="container" style={{ paddingTop: 'var(--spacing-xl)', paddingBottom: 'var(--spacing-2xl)' }}>
         <div className="page-header">
           <h1>Historial de Cambios</h1>
-          <p>Registro cronológico de movimientos realizados en asignaciones, docentes y materias</p>
+          <p>Movimientos ordenados del más reciente al más antiguo en asignaciones, docentes y materias</p>
         </div>
 
         <form className="filter-bar" onSubmit={aplicarBusqueda} style={{ justifyContent: 'space-between' }}>

@@ -1,7 +1,7 @@
 package com.gestion.backend.controller;
 
 import com.gestion.backend.dto.AsignacionDto;
-import com.gestion.backend.dto.HistorialAsignacionDto;
+import com.gestion.backend.dto.HistorialAsignacionPaginaDto;
 import com.gestion.backend.service.AsignacionService;
 import com.gestion.backend.service.HistorialAsignacionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +26,11 @@ public class AsignacionController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/historial")
-    public ResponseEntity<List<HistorialAsignacionDto>> obtenerHistorial(@PathVariable Long id) {
-        return ResponseEntity.ok(historialAsignacionService.obtenerHistorial(id));
+    public ResponseEntity<HistorialAsignacionPaginaDto> obtenerHistorial(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamanio) {
+        return ResponseEntity.ok(historialAsignacionService.obtenerHistorial(id, pagina, tamanio));
     }
 
     @GetMapping

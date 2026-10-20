@@ -5,8 +5,6 @@ import { buscarHistorialAsignacion, type EventoHistorialAsignacion } from '../ap
 const entidadLabel: Record<EventoHistorialAsignacion['entidad'], string> = {
   ASIGNACION: 'Asignación',
   ASIGNACION_DOCENTE: 'Vínculo con docente',
-  DOCENTE: 'Docente relacionado',
-  MATERIA: 'Materia relacionada',
 };
 
 const accionLabel: Record<EventoHistorialAsignacion['accion'], string> = {
@@ -22,17 +20,41 @@ const fechaLabel = (fecha: string) => new Intl.DateTimeFormat('es-AR', {
 
 function HistorialAsignacionModal({ asignacionId, onClose }: { asignacionId: number; onClose: () => void }) {
   const [eventos, setEventos] = useState<EventoHistorialAsignacion[]>([]);
+  const [pagina, setPagina] = useState(0);
+  const [hayMas, setHayMas] = useState(false);
+  const [cargandoMas, setCargandoMas] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
-    buscarHistorialAsignacion(asignacionId)
-      .then((resultado) => { if (activo) setEventos(resultado); })
+    buscarHistorialAsignacion(asignacionId, 0)
+      .then((resultado) => {
+        if (activo) {
+          setEventos(resultado.contenido);
+          setPagina(resultado.pagina);
+          setHayMas(resultado.hayMas);
+        }
+      })
       .catch(() => { if (activo) setError('No se pudo cargar el historial de esta asignación.'); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [asignacionId]);
+
+  const cargarMas = async () => {
+    const paginaSiguiente = pagina + 1;
+    setCargandoMas(true);
+    try {
+      const resultado = await buscarHistorialAsignacion(asignacionId, paginaSiguiente);
+      setEventos((actuales) => [...actuales, ...resultado.contenido]);
+      setPagina(resultado.pagina);
+      setHayMas(resultado.hayMas);
+    } catch {
+      setError('No se pudo cargar más historial. Intentá nuevamente.');
+    } finally {
+      setCargandoMas(false);
+    }
+  };
 
   return (
     <Modal title={`Historial de Cambios · Asignación #${asignacionId}`} onClose={onClose} size="lg">
@@ -73,6 +95,13 @@ function HistorialAsignacionModal({ asignacionId, onClose }: { asignacionId: num
             </li>
           ))}
         </ol>
+      )}
+      {!cargando && !error && eventos.length > 0 && hayMas && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--spacing-lg)' }}>
+          <button type="button" className="btn btn-secondary" onClick={cargarMas} disabled={cargandoMas}>
+            {cargandoMas ? 'Cargando…' : 'Cargar más'}
+          </button>
+        </div>
       )}
     </Modal>
   );
