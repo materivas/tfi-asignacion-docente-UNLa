@@ -11,6 +11,7 @@ import GestionDocente from './pages/GestionDocente';
 import GestionAsignacion from './pages/GestionAsignacion';
 import Login from './pages/Login';
 import MisHorarios from './pages/MisHorarios';
+import HistorialCambios from './pages/HistorialCambios';
 
 import Layout from './components/Layout';
 import Navbar from './components/Navbar';
@@ -37,6 +38,7 @@ function App() {
 
                             <Route path="/tablero" element={<ProtectedRoute requireAdmin={true}><Tablero /></ProtectedRoute>} />
                             <Route path="/gestion" element={<ProtectedRoute requireAdmin={true}><Gestion /></ProtectedRoute>} />
+                            <Route path="/historial" element={<ProtectedRoute requireAdmin={true}><HistorialCambios /></ProtectedRoute>} />
                             <Route path="/gestionCuatrimestre" element={<ProtectedRoute requireAdmin={true}><GestionCuatrimestre /></ProtectedRoute>} />
                             <Route path="/gestionCategoria" element={<ProtectedRoute requireAdmin={true}><GestionCategoria /></ProtectedRoute>} />
                             <Route path="/gestionDocente" element={<ProtectedRoute requireAdmin={true}><GestionDocente /></ProtectedRoute>} />

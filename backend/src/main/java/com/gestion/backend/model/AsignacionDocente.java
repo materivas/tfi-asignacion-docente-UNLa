@@ -5,13 +5,16 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.RelationTargetAuditMode;
 
 @Entity
+@Audited
 @Table(name = "asignacion_docente")
 @NoArgsConstructor
 @Getter
 @Setter
-public class AsignacionDocente {
+public class AsignacionDocente extends AuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "asig_docente_seq_gen")
@@ -29,6 +32,7 @@ public class AsignacionDocente {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rol_id", nullable = false)
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     private Rol rol;
 
     @Column(name = "horas_asignadas", nullable = false)

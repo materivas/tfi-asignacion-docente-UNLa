@@ -8,6 +8,7 @@ import { listarDocentes } from "../api/docenteApi";
 import { listarCuatrimestres } from "../api/cuatrimestreApi";
 import { listarRoles } from "../api/rolApi";
 import Modal from "src/components/Modal";
+import HistorialAsignacionModal from "../components/HistorialAsignacionModal";
 import { useToast } from "../context/ToastContext";
 
 const normalizarTurno = (turno: string) =>
@@ -73,6 +74,7 @@ function Tablero() {
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedAsignacionId, setSelectedAsignacionId] = useState<number | null>(null);
+  const [historialAsignacionId, setHistorialAsignacionId] = useState<number | null>(null);
   const [selectedDocenteId, setSelectedDocenteId] = useState<string>("");
   const [rolesMap, setRolesMap] = useState<Map<number, string>>(new Map());
   const [selectedRolId, setSelectedRolId] = useState<number | "">("");
@@ -1094,9 +1096,19 @@ function Tablero() {
                               });
 
                             return (
-                              <div key={asignacion.id} className="materia-card" draggable onDragStart={(e) => handleDragStartAsignacion(e, asignacion.id!, dia, turno)} onDragEnd={handleDragEndAsignacion} onDragOver={handleDragOverAsignacion} onDragLeave={handleDragLeaveAsignacion}>
+                              <div key={asignacion.id} className="materia-card" draggable onContextMenu={(e) => { e.preventDefault(); setHistorialAsignacionId(asignacion.id!); }} onDragStart={(e) => handleDragStartAsignacion(e, asignacion.id!, dia, turno)} onDragEnd={handleDragEndAsignacion} onDragOver={handleDragOverAsignacion} onDragLeave={handleDragLeaveAsignacion}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
                                   <div className="materia-card-name" style={{ flex: 1 }}>{materia.nombre}</div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setHistorialAsignacionId(asignacion.id!); }}
+                                    aria-label={`Ver historial de ${materia.nombre}`}
+                                    style={{ width: 20, height: 20, padding: 0, background: 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.55, transition: 'opacity 0.15s' }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--color-primary-50)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.55'; e.currentTarget.style.background = 'transparent'; }}
+                                    title="Ver historial de cambios"
+                                  >
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+                                  </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); borrarAsignacion(asignacion.id!); }}
                                     style={{ width: 20, height: 20, padding: 0, background: 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: 0.4, transition: 'opacity 0.15s' }}
@@ -1318,6 +1330,12 @@ function Tablero() {
             </div>
           </div>
         </Modal>
+      )}
+      {historialAsignacionId !== null && (
+        <HistorialAsignacionModal
+          asignacionId={historialAsignacionId}
+          onClose={() => setHistorialAsignacionId(null)}
+        />
       )}
     </main>
   );
